@@ -22,19 +22,6 @@
 
 ---
 
-## 📋 Pre-PR Checklist
-
-Before creating a pull request, complete all steps in [PR.md](../../PR.md):
-
-1. **Run local checks** - Lint, type check, tests, security scan
-2. **Review changes** - Use `git diff` to understand modifications
-3. **Update changelog** - Add sprint entry to `changelog.json`
-4. **Open PR** - Use GitHub CLI with detailed description
-5. **Monitor CI** - Wait for all checks to pass
-6. **Squash merge** - Merge and delete branch when approved
-
----
-
 ## 📋 Task List
 
 - [ ] **Task 0: Branch Setup**
