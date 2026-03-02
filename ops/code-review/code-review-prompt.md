@@ -122,11 +122,6 @@ Review steps (follow in order):
 - Have git diffs been reviewed to see what was actually changed?
 - Are all changes added, committed, and pushed?
 
-13) Process compliance
-- Has API been manually tested?
-- Have git diffs been reviewed to see what was actually changed?
-- Are all changes added, committed, and pushed?
-
 ---
 
 Output format: Follow code review report template: [code-review-report-template.md](./code-review-report-template.md)

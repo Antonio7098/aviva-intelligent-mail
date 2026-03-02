@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: mypy app
+      - run: mypy src
 
   test:
     name: Test
@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: pytest --cov=app --cov-report=xml
+      - run: pytest --cov=src --cov-report=xml
 
   security:
     name: Security Scan
