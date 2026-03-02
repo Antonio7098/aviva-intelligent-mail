@@ -87,21 +87,21 @@ Review steps (follow in order):
 - SQL injection risk
 - Auth placeholder correctness (if present)
 
-7) Event store safety
+9) Event store safety
 - Are updates/deletes prevented?
 - Is schema migration safe?
 - Is PII excluded from JSONB payloads?
 - Are indexes appropriate?
 - Is retention configurable?
 
-9) Performance & resilience
+10) Performance & resilience
 - Batch size controls
 - LLM cost guardrails
 - Circuit breaker usage
 - Timeout handling
 - Memory pressure risks (large email bodies)
 
-10) Testing discipline
+11) Testing discipline
 - Tests for:
   - redaction correctness
   - no raw content in persistence
@@ -110,7 +110,7 @@ Review steps (follow in order):
   - safe-mode fallback
 - Are regression tests deterministic?
 
-11) Documentation & ops readiness
+12) Documentation & ops readiness
 - Is behaviour documented in /docs?
 - Are new config flags documented?
 - Is runbook updated if required?
