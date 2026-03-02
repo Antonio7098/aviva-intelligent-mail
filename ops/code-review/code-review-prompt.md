@@ -90,7 +90,23 @@ Review steps (follow in order):
 - Deterministic behaviour across runs (temperature, seeds)
 - Clear failure modes
 
-6) Security
+6) SOLID principles
+- Single Responsibility: Does each class have one clear purpose?
+- Open/Closed: Are interfaces used for extensibility?
+- Liskov Substitution: Can implementations be swapped without breaking behavior?
+- Interface Segregation: Are interfaces minimal and focused (no fat interfaces)?
+- Dependency Inversion: Does code depend on abstractions, not concrete implementations?
+- Is dependency injection used throughout?
+
+7) File organization
+- Are files small and focused (< 300 lines preferred)?
+- Is module structure clear and logical (pipeline/, domain/, store/, etc.)?
+- Are there any "god classes" or monolithic files?
+- Are related files grouped in same directory?
+- Do imports follow module structure?
+- Is filesystem organized and maintainable?
+
+8) Security
 - Input validation at API boundary
 - Rate limiting and request size limits
 - Secret storage (no hardcoded keys)
@@ -106,14 +122,14 @@ Review steps (follow in order):
 - Are indexes appropriate?
 - Is retention configurable?
 
-8) Performance & resilience
+9) Performance & resilience
 - Batch size controls
 - LLM cost guardrails
 - Circuit breaker usage
 - Timeout handling
 - Memory pressure risks (large email bodies)
 
-9) Testing discipline
+10) Testing discipline
 - Tests for:
   - redaction correctness
   - no raw content in persistence
@@ -122,7 +138,7 @@ Review steps (follow in order):
   - safe-mode fallback
 - Are regression tests deterministic?
 
-10) Documentation & ops readiness
+11) Documentation & ops readiness
 - Is behaviour documented in /docs?
 - Are new config flags documented?
 - Is runbook updated if required?
@@ -174,6 +190,21 @@ Same structure.
 - Hallucination risk
 - Determinism status
 - Safe-mode coverage
+
+# SOLID Principles Assessment
+- Single Responsibility: Does each class have one clear purpose?
+- Open/Closed: Are interfaces used for extensibility?
+- Liskov Substitution: Can implementations be swapped without breaking behavior?
+- Interface Segregation: Are interfaces minimal and focused (no fat interfaces)?
+- Dependency Inversion: Does code depend on abstractions, not concrete implementations?
+
+# File Organization Assessment
+- Small & focused files
+- Clear module structure
+- No god classes
+- Logical grouping
+- Import consistency
+- Filesystem organization
 
 # Test & Verification Plan
 - CI checks required
