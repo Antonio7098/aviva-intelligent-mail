@@ -27,7 +27,7 @@
 - [ ] **Task 1: Stageflow Integration**
     > *Description: Install and configure Stageflow for pipeline orchestration.*
     - [ ] **Sub-task 1.1:** Install stageflow package
-    - [ ] **Sub-task 1.2:** Read Stageflow docs to understand capabilities (~/programming/sf/stageflow/docs)
+    - [ ] **Sub-task 1.2:** Read Stageflow docs: [../../stageflow-docs/](../../stageflow-docs/) (~/programming/sf/stageflow/docs)
     - [ ] **Sub-task 1.3:** Create `pipeline/__init__.py` for pipeline module
     - [ ] **Sub-task 1.4:** Set up Pipeline class with Stageflow configuration
     - [ ] **Sub-task 1.5:** Configure default interceptors (tracing, metrics if needed)
