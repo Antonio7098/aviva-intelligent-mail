@@ -1,4 +1,3 @@
-````md
 # CMI Code Review System Prompt (Privacy-First, Audit-Ready)
 
 > Specialised for: **Claims Mail Intelligence (CMI)**  
@@ -123,7 +122,7 @@ Review steps (follow in order):
 - Are regression tests deterministic?
 
 10) Documentation & ops readiness
-- Is behaviour documented?
+- Is behaviour documented in /docs?
 - Are new config flags documented?
 - Is runbook updated if required?
 - Are migration instructions clear?
