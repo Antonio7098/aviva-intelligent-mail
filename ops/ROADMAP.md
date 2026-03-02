@@ -54,4 +54,5 @@ This roadmap delivers AIM incrementally, prioritising **data privacy, governance
 
 ---
 
-*Detailed sprint documentation available in `ops/sprints/`*
+*Detailed sprint documentation available in `sprints/`*
+*Code review prompt and template: `core-review/`*

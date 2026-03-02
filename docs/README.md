@@ -17,12 +17,13 @@ This directory contains business and operational documentation for Aviva Intelli
 
 - [../README.md](../README.md) - Project overview, PRD, requirements, objectives
 - [../ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture, data flows, technology stack
-- [../ROADMAP.md](../ROADMAP.md) - High-level sprint roadmap
-- [../SPRINT_TEMPLATE.md](../SPRINT_TEMPLATE.md) - Template for sprint planning and tracking
+- [../ops/ROADMAP.md](../ops/ROADMAP.md) - High-level sprint roadmap
+- [../ops/SPRINT_TEMPLATE.md](../ops/SPRINT_TEMPLATE.md) - Template for sprint planning and tracking
 
 ### Operational Documentation
 
 - [../ops/sprints/](../ops/sprints/) - Detailed sprint plans and tracking
+- [../ops/core-review/](../ops/core-review/) - Code review prompts and report templates
 - [../ops/RUNBOOK.md](../ops/RUNBOOK.md) - Operational procedures (created in Sprint 9)
 - [../ops/DATA_HANDLING.md](../ops/DATA_HANDLING.md) - Data handling policies (created in Sprint 9)
 
@@ -36,7 +37,10 @@ This directory contains business and operational documentation for Aviva Intelli
 
 ## Quick Links
 
-- **Sprint Planning:** [ops/sprints/](../ops/sprints/)
+- **Sprint Planning:** [../ops/sprints/](../ops/sprints/)
+- **Sprint Roadmap:** [../ops/ROADMAP.md](../ops/ROADMAP.md)
+- **Sprint Template:** [../ops/SPRINT_TEMPLATE.md](../ops/SPRINT_TEMPLATE.md)
+- **Code Review:** [../ops/core-review/](../ops/core-review/)
 - **API Documentation:** Run FastAPI and visit `/docs`
 - **Privacy & Security:** [ARCHITECTURE.md#8-data-protection-architecture](../ARCHITECTURE.md#8-data-protection-architecture)
 - **Pipeline Design:** [ARCHITECTURE.md#5-pipeline-design-stageflow](../ARCHITECTURE.md#5-pipeline-design-stageflow)
@@ -60,7 +64,7 @@ All AIM documentation follows these principles:
 
 When implementing features:
 
-1. Update sprint document with progress and notes
+1. Update sprint document with progress and notes (in ops/sprints/)
 2. Update ARCHITECTURE.md if architectural decisions change
 3. Update docs/README.md if new operational docs are added
 4. Sign-off sprint before moving to next sprint
