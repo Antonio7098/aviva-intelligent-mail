@@ -22,7 +22,26 @@
 
 ---
 
+## 📋 Pre-PR Checklist
+
+Before creating a pull request, complete all steps in [PR.md](../../PR.md):
+
+1. **Run local checks** - Lint, type check, tests, security scan
+2. **Review changes** - Use `git diff` to understand modifications
+3. **Update changelog** - Add sprint entry to `changelog.json`
+4. **Open PR** - Use GitHub CLI with detailed description
+5. **Monitor CI** - Wait for all checks to pass
+6. **Squash merge** - Merge and delete branch when approved
+
+---
+
 ## 📋 Task List
+
+- [ ] **Task 0: Branch Setup**
+    > *Description: Ensure you're on the correct sprint branch before starting work.*
+    - [ ] **Sub-task 0.1:** Check current branch: `git branch`
+    - [ ] **Sub-task 0.2:** Create or switch to sprint branch: `git checkout -b sprint/N-name` or `git checkout sprint/N-name`
+    - [ ] **Sub-task 0.3:** Verify branch is up to date with main: `git fetch origin && git rebase origin/main`
 
 - [ ] **Task 1: [Task 1 Name]**
     > *Description: [Briefly describe the purpose of this task and how it contributes to sprint goals]*
