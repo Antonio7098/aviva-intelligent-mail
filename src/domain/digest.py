@@ -62,11 +62,11 @@ class DailyDigest(BaseModel):
     )
 
     summary_counts: DigestSummaryCounts = Field(
-        default_factory=lambda: DigestSummaryCounts.model_validate({}),
+        default_factory=lambda: DigestSummaryCounts(),
         description="Summary counts by classification",
     )
     priority_breakdown: PriorityBreakdown = Field(
-        default_factory=lambda: PriorityBreakdown.model_validate({}),
+        default_factory=lambda: PriorityBreakdown(),
         description="Breakdown by priority level",
     )
 

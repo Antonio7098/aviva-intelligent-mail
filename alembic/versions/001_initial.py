@@ -8,9 +8,9 @@ Create Date: 2024-01-01 00:00:00.000000
 
 from typing import Sequence, Union
 
-from alembic import op  # type: ignore[attr-defined]
-import sqlalchemy as sa  # type: ignore[import-not-found]
-from sqlalchemy.dialects import postgresql  # type: ignore[import-not-found]
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.

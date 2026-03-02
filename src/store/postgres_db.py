@@ -1,7 +1,7 @@
 import os
 from typing import Any
-import asyncpg  # type: ignore[import-untyped]
-from asyncpg import Connection, Pool  # type: ignore[import-untyped]
+import asyncpg
+from asyncpg import Connection, Pool
 
 from src.store.database import Database, Transaction
 
@@ -81,8 +81,6 @@ class PostgresDatabase(Database):
         query: str,
         parameters: list[Any] | dict[str, Any] | None = None,
     ) -> str:
-        if not self._pool:
-            raise RuntimeError("Database not connected")
         async with self._pool.acquire() as conn:
             return await conn.execute(query, *self._format_params(parameters))
 
@@ -91,8 +89,6 @@ class PostgresDatabase(Database):
         query: str,
         parameters: list[Any] | dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        if not self._pool:
-            raise RuntimeError("Database not connected")
         async with self._pool.acquire() as conn:
             return await conn.fetch(query, *self._format_params(parameters))
 
@@ -101,8 +97,6 @@ class PostgresDatabase(Database):
         query: str,
         parameters: list[Any] | dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
-        if not self._pool:
-            raise RuntimeError("Database not connected")
         async with self._pool.acquire() as conn:
             return await conn.fetchrow(query, *self._format_params(parameters))
 

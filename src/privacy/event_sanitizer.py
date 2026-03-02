@@ -153,7 +153,7 @@ class EventSanitizer:
         Returns:
             Sanitized payload
         """
-        sanitized: dict[str, Any] = {}
+        sanitized = {}
 
         for key, value in payload.items():
             if key.lower() in ["body_text", "body_html", "raw_body", "email_body"]:
@@ -174,18 +174,11 @@ class EventSanitizer:
             elif isinstance(value, dict):
                 sanitized[key] = self._sanitize_payload(value)
             elif isinstance(value, list):
-                sanitized[key] = self._sanitize_list(value)
+                sanitized[key] = [
+                    self._sanitize_payload(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
             else:
                 sanitized[key] = value
 
         return sanitized
-
-    def _sanitize_list(self, items: list[Any]) -> list[Any]:
-        """Sanitize a list of items."""
-        result: list[Any] = []
-        for item in items:
-            if isinstance(item, dict):
-                result.append(self._sanitize_payload(item))
-            else:
-                result.append(item)
-        return result

@@ -99,11 +99,11 @@ class Transaction:
 
     async def commit(self) -> None:
         """Commit the transaction."""
-        raise NotImplementedError
+        ...
 
     async def rollback(self) -> None:
         """Rollback the transaction."""
-        raise NotImplementedError
+        ...
 
     async def execute(
         self,
@@ -111,7 +111,7 @@ class Transaction:
         parameters: list[Any] | dict[str, Any] | None = None,
     ) -> str:
         """Execute a query within the transaction."""
-        raise NotImplementedError
+        ...
 
     async def fetch_all(
         self,
@@ -119,7 +119,7 @@ class Transaction:
         parameters: list[Any] | dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Fetch all rows within the transaction."""
-        raise NotImplementedError
+        ...
 
     async def fetch_one(
         self,
@@ -127,4 +127,4 @@ class Transaction:
         parameters: list[Any] | dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """Fetch a single row within the transaction."""
-        raise NotImplementedError
+        ...
