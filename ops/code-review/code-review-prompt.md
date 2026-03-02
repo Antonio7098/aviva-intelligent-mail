@@ -146,7 +146,7 @@ Review steps (follow in order):
 
 ---
 
-Output format (Markdown):
+Output format: Follow code review report template: [code-review-report-template.md](./code-review-report-template.md)
 
 # TL;DR (3–6 bullets)
 
