@@ -12,7 +12,7 @@ from stageflow import StageContext, StageKind, StageOutput
 class MyStage:
     name: str = "my_stage"      # Unique identifier
     kind: StageKind = StageKind.TRANSFORM  # Categorization
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         """Execute the stage logic."""
         ...
@@ -63,7 +63,7 @@ class ProfileEnrichStage:
         user_id = ctx.snapshot.user_id
         if not user_id:
             return StageOutput.skip(reason="No user_id provided")
-        
+
         profile = await self.profile_service.get_profile(user_id)
         return StageOutput.ok(
             profile={
@@ -86,7 +86,7 @@ class RouterStage:
 
     async def execute(self, ctx: StageContext) -> StageOutput:
         input_text = ctx.snapshot.input_text or ""
-        
+
         # Simple keyword-based routing
         if "help" in input_text.lower():
             route = "support"
@@ -94,7 +94,7 @@ class RouterStage:
             route = "sales"
         else:
             route = "general"
-        
+
         return StageOutput.ok(
             route=route,
             confidence=0.9,
@@ -114,7 +114,7 @@ class InputGuardStage:
 
     async def execute(self, ctx: StageContext) -> StageOutput:
         input_text = ctx.snapshot.input_text or ""
-        
+
         # Check for blocked content
         blocked_words = ["spam", "abuse"]
         for word in blocked_words:
@@ -123,7 +123,7 @@ class InputGuardStage:
                     reason=f"Blocked content detected: {word}",
                     data={"blocked": True},
                 )
-        
+
         return StageOutput.ok(validated=True)
 ```
 
@@ -143,13 +143,13 @@ class PersistStage:
 
     async def execute(self, ctx: StageContext) -> StageOutput:
         response = ctx.inputs.get("response")
-        
+
         if response:
             await self.db.save_interaction(
                 session_id=ctx.snapshot.session_id,
                 response=response,
             )
-        
+
         return StageOutput.ok(persisted=True)
 ```
 
@@ -175,10 +175,10 @@ class ChatAgentStage:
         messages = list(ctx.snapshot.messages)
         if ctx.snapshot.input_text:
             messages.append({"role": "user", "content": ctx.snapshot.input_text})
-        
+
         # Call LLM
         response = await self.llm_client.chat(messages)
-        
+
         # Parse + resolve tool calls (LLM-native format)
         resolved, unresolved = self.tool_registry.parse_and_resolve(response.tool_calls)
 
@@ -187,7 +187,7 @@ class ChatAgentStage:
             tool_input = ToolInput(action=call.arguments)
             result = await call.tool.execute(tool_input, ctx={"call_id": call.call_id})
             tool_results.append(result)
-        
+
         return StageOutput.ok(
             response=response.content,
             tool_results=tool_results,
@@ -206,19 +206,19 @@ The `ContextSnapshot` contains immutable input data:
 async def execute(self, ctx: StageContext) -> StageOutput:
     # User input
     input_text = ctx.snapshot.input_text
-    
+
     # Identity
     user_id = ctx.snapshot.user_id
     session_id = ctx.snapshot.session_id
     org_id = ctx.snapshot.org_id
-    
+
     # Configuration
     topology = ctx.snapshot.topology
     execution_mode = ctx.snapshot.execution_mode
-    
+
     # Message history
     messages = ctx.snapshot.messages
-    
+
     # Enrichments (if populated by earlier stages)
     profile = ctx.snapshot.profile
     memory = ctx.snapshot.memory
@@ -235,14 +235,14 @@ from stageflow.stages.inputs import StageInputs
 async def execute(self, ctx: StageContext) -> StageOutput:
     # Get specific key from any upstream stage (searches all)
     processed_text = ctx.inputs.get("text")
-    
+
     # Get from a specific stage (preferred - explicit dependency)
     router_decision = ctx.inputs.get_from("router", "route", default="general")
-    
+
     # Check if a stage has output
     if ctx.inputs.has_output("validator"):
         validator_output = ctx.inputs.get_output("validator")
-    
+
     # Access injected services through ports
     if ctx.inputs.ports and ctx.inputs.ports.llm_provider:
         response = await ctx.inputs.ports.llm_provider.chat(...)
@@ -265,7 +265,7 @@ async def execute(self, ctx: StageContext) -> StageOutput:
 ```python
 # These will raise TypeError/ValueError with clear messages:
 ctx.inputs.get(None)                    # TypeError: StageInputs key must be provided
-ctx.inputs.get_from("stage", None)       # TypeError: StageInputs key must be a string  
+ctx.inputs.get_from("stage", None)       # TypeError: StageInputs key must be a string
 ctx.inputs.require_from("stage", "")     # ValueError: StageInputs key cannot be empty
 
 # Correct usage:
@@ -292,23 +292,23 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     ports = ctx.inputs.ports or CorePorts()
     llm_ports: LLMPorts | None = ports if isinstance(ports, LLMPorts) else None
     audio_ports: AudioPorts | None = ports if isinstance(ports, AudioPorts) else None
-    
+
     # Database access (CorePorts)
     if ports.db:
         await ports.db.save_interaction(...)
-    
+
     # LLM operations (LLMPorts)
     if llm_ports and llm_ports.llm_provider:
         response = await llm_ports.llm_provider.chat(messages)
-    
+
     # Token streaming (LLMPorts)
     if llm_ports and llm_ports.send_token:
         await llm_ports.send_token("Hello")
-    
+
     # Audio streaming (AudioPorts)
     if audio_ports and audio_ports.send_audio_chunk:
         await audio_ports.send_audio_chunk(audio_bytes, "wav", 0, False)
-    
+
     # Status updates (CorePorts)
     if ports.send_status:
         await ports.send_status(ctx.stage_name, "completed", {"data": result})
@@ -553,9 +553,9 @@ Stages can emit events for observability:
 async def execute(self, ctx: StageContext) -> StageOutput:
     # Emit a custom event
     ctx.emit_event("custom.processing_started", {"step": 1})
-    
+
     # Do work...
-    
+
     ctx.emit_event("custom.processing_completed", {"step": 1, "duration_ms": 100})
 
     # Emit streaming telemetry by wiring ChunkQueue/StreamingBuffer emitters
@@ -563,7 +563,7 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     queue = ChunkQueue(event_emitter=ctx.emit_event)
     await queue.put("sample")
     await queue.close()
-    
+
     return StageOutput.ok(...)
 ```
 
@@ -619,7 +619,7 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     user_id = ctx.snapshot.user_id
     if not user_id:
         return StageOutput.skip(reason="No user_id")
-    
+
     # Continue with valid data...
 ```
 

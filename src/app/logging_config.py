@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.config import settings
+from src.app.config import settings
 
 
 correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")

@@ -579,4 +579,3 @@ Then LLM summarisation over structured context
 **Confidence**
 
 * Builds scalable AI capability in GI
-

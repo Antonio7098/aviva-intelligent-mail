@@ -22,13 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
-COPY app/ ./app/
-COPY domain/ ./domain/
-COPY pipeline/ ./pipeline/
-COPY privacy/ ./privacy/
-COPY audit/ ./audit/
-COPY store/ ./store/
+COPY src/ ./src/
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

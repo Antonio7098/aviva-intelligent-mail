@@ -326,7 +326,7 @@ from pathlib import Path
 def lint_all_pipelines(pipelines_dir: Path) -> bool:
     """Lint all pipeline files in a directory."""
     all_valid = True
-    
+
     for py_file in pipelines_dir.glob("**/*.py"):
         try:
             result = lint_pipeline_file(py_file)
@@ -338,7 +338,7 @@ def lint_all_pipelines(pipelines_dir: Path) -> bool:
         except Exception as e:
             print(f"⚠️  {py_file}: {e}")
             all_valid = False
-    
+
     return all_valid
 
 # Usage

@@ -201,9 +201,9 @@ def ctx(snapshot):
 @pytest.mark.asyncio
 async def test_uppercase_stage(ctx):
     stage = UppercaseStage()
-    
+
     output = await stage.execute(ctx)
-    
+
     assert output.status == StageStatus.OK
     assert output.data["text"] == "HELLO WORLD"
 ```
@@ -228,9 +228,9 @@ def mock_profile_service():
 @pytest.mark.asyncio
 async def test_profile_enrich_stage(ctx, mock_profile_service):
     stage = ProfileEnrichStage(profile_service=mock_profile_service)
-    
+
     output = await stage.execute(ctx)
-    
+
     assert output.status == StageStatus.OK
     assert output.data["profile"]["display_name"] == "Alice"
     mock_profile_service.get_profile.assert_called_once_with(ctx.snapshot.user_id)
@@ -260,9 +260,9 @@ async def test_profile_enrich_skips_without_user_id():
         timer=PipelineTimer(),
     )
     stage = ProfileEnrichStage()
-    
+
     output = await stage.execute(ctx)
-    
+
     assert output.status == StageStatus.SKIP
     assert "No user_id" in output.data.get("reason", "")
 ```
@@ -274,9 +274,9 @@ async def test_profile_enrich_skips_without_user_id():
 async def test_llm_stage_handles_api_error(ctx, mock_llm_client):
     mock_llm_client.chat.side_effect = Exception("API Error")
     stage = LLMStage(llm_client=mock_llm_client)
-    
+
     output = await stage.execute(ctx)
-    
+
     assert output.status == StageStatus.FAIL
     assert "API Error" in output.error
 ```
@@ -310,9 +310,9 @@ async def test_pipeline_execution(test_pipeline, snapshot):
         stage_name="pipeline_entry",
         timer=PipelineTimer(),
     )
-    
+
     results = await graph.run(ctx)
-    
+
     assert "input" in results
     assert "process" in results
     assert "output" in results
@@ -329,7 +329,7 @@ async def test_data_flows_between_stages(snapshot):
         .with_stage("producer", ProducerStage, StageKind.TRANSFORM)
         .with_stage("consumer", ConsumerStage, StageKind.TRANSFORM, dependencies=("producer",))
     )
-    
+
     graph = pipeline.build()
     ctx = StageContext(
         snapshot=snapshot,
@@ -337,12 +337,12 @@ async def test_data_flows_between_stages(snapshot):
         stage_name="pipeline_entry",
         timer=PipelineTimer(),
     )
-    
+
     results = await graph.run(ctx)
-    
+
     # Verify producer output
     assert results["producer"].data["value"] == 42
-    
+
     # Verify consumer received producer's output
     assert results["consumer"].data["received_value"] == 42
 ```
@@ -359,10 +359,10 @@ async def test_parallel_stages_run_concurrently(snapshot):
         Pipeline()
         .with_stage("parallel_a", SlowStage(delay=0.1), StageKind.ENRICH)
         .with_stage("parallel_b", SlowStage(delay=0.1), StageKind.ENRICH)
-        .with_stage("aggregate", AggregateStage, StageKind.TRANSFORM, 
+        .with_stage("aggregate", AggregateStage, StageKind.TRANSFORM,
                    dependencies=("parallel_a", "parallel_b"))
     )
-    
+
     graph = pipeline.build()
     ctx = StageContext(
         snapshot=snapshot,
@@ -370,11 +370,11 @@ async def test_parallel_stages_run_concurrently(snapshot):
         stage_name="pipeline_entry",
         timer=PipelineTimer(),
     )
-    
+
     start = time.time()
     results = await graph.run(ctx)
     elapsed = time.time() - start
-    
+
     # Should take ~0.1s (parallel), not ~0.2s (sequential)
     assert elapsed < 0.15
 ```
@@ -391,7 +391,7 @@ async def test_pipeline_cancellation(snapshot):
         .with_stage("guard", CancellingGuardStage, StageKind.GUARD)
         .with_stage("process", ProcessStage, StageKind.TRANSFORM, dependencies=("guard",))
     )
-    
+
     graph = pipeline.build()
     ctx = StageContext(
         snapshot=snapshot,
@@ -399,10 +399,10 @@ async def test_pipeline_cancellation(snapshot):
         stage_name="pipeline_entry",
         timer=PipelineTimer(),
     )
-    
+
     with pytest.raises(UnifiedPipelineCancelled) as exc_info:
         await graph.run(ctx)
-    
+
     assert exc_info.value.stage == "guard"
     assert "guard" in exc_info.value.results
     assert "process" not in exc_info.value.results
@@ -428,23 +428,23 @@ def mock_pipeline_ctx():
 @pytest.mark.asyncio
 async def test_rate_limit_allows_requests(mock_pipeline_ctx):
     interceptor = RateLimitInterceptor(max_requests=10)
-    
+
     result = await interceptor.before("test_stage", mock_pipeline_ctx)
-    
+
     assert result is None  # None means continue
 
 
 @pytest.mark.asyncio
 async def test_rate_limit_blocks_excess(mock_pipeline_ctx):
     interceptor = RateLimitInterceptor(max_requests=2)
-    
+
     # First two pass
     await interceptor.before("test_stage", mock_pipeline_ctx)
     await interceptor.before("test_stage", mock_pipeline_ctx)
-    
+
     # Third blocked
     result = await interceptor.before("test_stage", mock_pipeline_ctx)
-    
+
     assert result is not None
     assert result.stage_ran is False
 ```
@@ -457,26 +457,26 @@ from stageflow import ErrorAction
 @pytest.mark.asyncio
 async def test_retry_interceptor_retries_transient_errors(mock_pipeline_ctx):
     interceptor = RetryInterceptor(max_retries=3)
-    
+
     action = await interceptor.on_error(
         "test_stage",
         TimeoutError("Connection timed out"),
         mock_pipeline_ctx,
     )
-    
+
     assert action == ErrorAction.RETRY
 
 
 @pytest.mark.asyncio
 async def test_retry_interceptor_fails_permanent_errors(mock_pipeline_ctx):
     interceptor = RetryInterceptor(max_retries=3)
-    
+
     action = await interceptor.on_error(
         "test_stage",
         ValueError("Invalid input"),
         mock_pipeline_ctx,
     )
-    
+
     assert action == ErrorAction.FAIL
 ```
 
@@ -499,9 +499,9 @@ def tool_input():
 @pytest.mark.asyncio
 async def test_greet_tool(tool_input):
     tool = GreetTool()
-    
+
     output = await tool.execute(tool_input, ctx={})
-    
+
     assert output.success
     assert output.data["message"] == "Hello, Alice!"
 ```
@@ -540,9 +540,9 @@ def test_registry_finds_by_action_type(registry):
 async def test_stage_returns_stage_output(ctx):
     """All stages must return StageOutput."""
     stage = MyStage()
-    
+
     output = await stage.execute(ctx)
-    
+
     assert isinstance(output, StageOutput)
     assert output.status in StageStatus
 
@@ -551,7 +551,7 @@ async def test_stage_returns_stage_output(ctx):
 async def test_stage_has_required_attributes():
     """All stages must have name and kind."""
     stage = MyStage()
-    
+
     assert hasattr(stage, "name")
     assert hasattr(stage, "kind")
     assert isinstance(stage.name, str)
@@ -564,10 +564,10 @@ async def test_stage_has_required_attributes():
 def test_pipeline_has_no_cycles():
     """Pipeline must be a valid DAG."""
     pipeline = create_my_pipeline()
-    
+
     # build() validates the DAG
     graph = pipeline.build()
-    
+
     assert len(graph.stage_specs) > 0
 
 
@@ -575,7 +575,7 @@ def test_pipeline_dependencies_exist():
     """All dependencies must reference existing stages."""
     pipeline = create_my_pipeline()
     stage_names = set(pipeline.stages.keys())
-    
+
     for spec in pipeline.stages.values():
         for dep in spec.dependencies:
             assert dep in stage_names, f"Missing dependency: {dep}"

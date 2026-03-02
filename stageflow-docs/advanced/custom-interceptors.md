@@ -195,7 +195,7 @@ class RequestLoggingInterceptor(BaseInterceptor):
 
     async def before(self, stage_name: str, ctx: PipelineContext) -> None:
         ctx.data[f"_request_log.{stage_name}.start"] = datetime.now(timezone.utc)
-        
+
         logger.info(
             f"Stage {stage_name} starting",
             extra={
@@ -267,7 +267,7 @@ class FeatureFlagInterceptor(BaseInterceptor):
     async def before(self, stage_name: str, ctx: PipelineContext) -> InterceptorResult | None:
         # Check if stage is enabled for this user/org
         feature_key = f"stage.{stage_name}.enabled"
-        
+
         is_enabled = await self.feature_service.is_enabled(
             feature_key,
             user_id=ctx.user_id,
@@ -328,7 +328,7 @@ async def before(self, stage_name: str, ctx: PipelineContext) -> InterceptorResu
             result={"cached": True, "data": cached_data},
             error=None,  # Not an error, just skipped
         )
-    
+
     # Continue to stage
     return None
 ```
@@ -341,10 +341,10 @@ Control error behavior with `ErrorAction`:
 async def on_error(self, stage_name: str, error: Exception, ctx: PipelineContext) -> ErrorAction:
     if isinstance(error, TransientError):
         return ErrorAction.RETRY  # Retry the stage
-    
+
     if isinstance(error, RecoverableError):
         return ErrorAction.FALLBACK  # Use fallback result
-    
+
     return ErrorAction.FAIL  # Propagate failure
 ```
 
@@ -357,20 +357,20 @@ from stageflow import InterceptorContext
 
 async def before(self, stage_name: str, ctx: PipelineContext) -> None:
     i_ctx = InterceptorContext(ctx, _interceptor_name=self.name)
-    
+
     # Read-only access to data
     data = i_ctx.data  # Returns a copy
-    
+
     # Access IDs
     run_id = i_ctx.pipeline_run_id
     user_id = i_ctx.user_id
-    
+
     # Add observation for other interceptors
     i_ctx.add_observation("start_time", time.time())
 
 async def after(self, stage_name: str, result: StageResult, ctx: PipelineContext) -> None:
     i_ctx = InterceptorContext(ctx, _interceptor_name=self.name)
-    
+
     # Retrieve observation
     start_time = i_ctx.get_observation("start_time")
 ```
@@ -416,7 +416,7 @@ def mock_ctx():
 @pytest.mark.asyncio
 async def test_rate_limit_allows_requests(mock_ctx):
     interceptor = RateLimitInterceptor(max_requests=10)
-    
+
     # First request should pass
     result = await interceptor.before("test_stage", mock_ctx)
     assert result is None
@@ -424,11 +424,11 @@ async def test_rate_limit_allows_requests(mock_ctx):
 @pytest.mark.asyncio
 async def test_rate_limit_blocks_excess(mock_ctx):
     interceptor = RateLimitInterceptor(max_requests=2)
-    
+
     # First two requests pass
     await interceptor.before("test_stage", mock_ctx)
     await interceptor.before("test_stage", mock_ctx)
-    
+
     # Third request blocked
     result = await interceptor.before("test_stage", mock_ctx)
     assert result is not None

@@ -46,9 +46,9 @@ This roadmap delivers AIM incrementally, prioritising **data privacy, governance
 
 ## Progress Tracking
 
-**Current Sprint:** Not Started
+**Current Sprint:** Sprint 1 - Foundations
 
-**Overall Progress:** 0/9 Sprints Completed
+**Overall Progress:** 1/9 Sprints Completed
 
 **MVP Target:** Sprint 9
 

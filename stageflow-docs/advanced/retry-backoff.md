@@ -27,14 +27,14 @@ Delays grow exponentially: `base * 2^attempt`. Reduces load during outages.
 ```python
 def exponential_delay(attempt: int, base_ms: int = 1000) -> int:
     """Calculate exponential backoff delay.
-    
+
     Args:
         attempt: Current attempt number (0-indexed)
         base_ms: Base delay in milliseconds
-    
+
     Returns:
         Delay in milliseconds
-    
+
     Example:
         attempt 0: 1000ms
         attempt 1: 2000ms
@@ -51,7 +51,7 @@ Delays grow linearly: `base * attempt`. Simpler but slower to reduce load.
 ```python
 def linear_delay(attempt: int, base_ms: int = 1000) -> int:
     """Calculate linear backoff delay.
-    
+
     Example:
         attempt 0: 1000ms
         attempt 1: 2000ms
@@ -85,7 +85,7 @@ import random
 
 def full_jitter(base_delay_ms: int) -> int:
     """Random delay from 0 to base_delay_ms.
-    
+
     Provides maximum spread to prevent thundering herd.
     """
     return random.randint(0, base_delay_ms)
@@ -98,7 +98,7 @@ Half fixed, half random. Balances predictability and spread.
 ```python
 def equal_jitter(base_delay_ms: int) -> int:
     """Half fixed delay, half random.
-    
+
     Guarantees minimum wait while adding spread.
     """
     half = base_delay_ms // 2
@@ -116,7 +116,7 @@ def decorrelated_jitter(
     max_ms: int = 30000,
 ) -> int:
     """Decorrelated jitter per AWS recommendations.
-    
+
     delay = min(max_delay, random(base, prev * 3))
     """
     return min(max_ms, random.randint(base_ms, previous_delay_ms * 3))
@@ -157,14 +157,14 @@ class JitterStrategy(Enum):
 
 class RetryInterceptor(BaseInterceptor):
     """Interceptor that automatically retries failed stages.
-    
+
     Configurable backoff and jitter strategies prevent thundering herd
     and gracefully handle transient failures.
     """
-    
+
     name = "retry"
     priority = 15  # Run after circuit breaker, before tracing
-    
+
     def __init__(
         self,
         max_attempts: int = 3,
@@ -179,7 +179,7 @@ class RetryInterceptor(BaseInterceptor):
         ),
     ) -> None:
         """Initialize retry interceptor.
-        
+
         Args:
             max_attempts: Maximum retry attempts (including initial)
             base_delay_ms: Base delay between retries
@@ -194,10 +194,10 @@ class RetryInterceptor(BaseInterceptor):
         self.backoff_strategy = backoff_strategy
         self.jitter_strategy = jitter_strategy
         self.retryable_errors = retryable_errors
-        
+
         # Track delays for decorrelated jitter
         self._previous_delays: dict[str, int] = {}
-    
+
     async def before(
         self, stage_name: str, ctx: PipelineContext
     ) -> None:
@@ -206,7 +206,7 @@ class RetryInterceptor(BaseInterceptor):
         if "_retry.attempt" not in ctx.data:
             ctx.data["_retry.attempt"] = 0
             ctx.data["_retry.stage"] = stage_name
-    
+
     async def after(
         self, stage_name: str, result: StageResult, ctx: PipelineContext
     ) -> None:
@@ -216,12 +216,12 @@ class RetryInterceptor(BaseInterceptor):
             ctx.data.pop("_retry.attempt", None)
             ctx.data.pop("_retry.stage", None)
             self._previous_delays.pop(stage_name, None)
-    
+
     async def on_error(
         self, stage_name: str, error: Exception, ctx: PipelineContext
     ) -> ErrorAction:
         """Handle stage errors with configurable retry logic."""
-        
+
         # Check if error is retryable
         if not isinstance(error, self.retryable_errors):
             logger.debug(
@@ -229,10 +229,10 @@ class RetryInterceptor(BaseInterceptor):
                 extra={"stage": stage_name, "error": str(error)},
             )
             return ErrorAction.FAIL
-        
+
         # Get current attempt
         attempt = ctx.data.get("_retry.attempt", 0)
-        
+
         # Check if we've exhausted retries
         if attempt >= self.max_attempts - 1:
             logger.warning(
@@ -244,10 +244,10 @@ class RetryInterceptor(BaseInterceptor):
                 },
             )
             return ErrorAction.FAIL
-        
+
         # Calculate delay
         delay_ms = self._calculate_delay(stage_name, attempt)
-        
+
         logger.info(
             f"Retrying stage {stage_name} in {delay_ms}ms (attempt {attempt + 2}/{self.max_attempts})",
             extra={
@@ -257,7 +257,7 @@ class RetryInterceptor(BaseInterceptor):
                 "error": str(error),
             },
         )
-        
+
         # Emit retry event
         if hasattr(ctx, "event_sink"):
             ctx.event_sink.try_emit(
@@ -270,18 +270,18 @@ class RetryInterceptor(BaseInterceptor):
                     "error_type": type(error).__name__,
                 },
             )
-        
+
         # Wait before retry
         await asyncio.sleep(delay_ms / 1000.0)
-        
+
         # Increment attempt counter
         ctx.data["_retry.attempt"] = attempt + 1
-        
+
         return ErrorAction.RETRY
-    
+
     def _calculate_delay(self, stage_name: str, attempt: int) -> int:
         """Calculate delay with backoff and jitter."""
-        
+
         # Base delay from backoff strategy
         if self.backoff_strategy == BackoffStrategy.EXPONENTIAL:
             base_delay = self.base_delay_ms * (2 ** attempt)
@@ -289,10 +289,10 @@ class RetryInterceptor(BaseInterceptor):
             base_delay = self.base_delay_ms * (attempt + 1)
         else:  # CONSTANT
             base_delay = self.base_delay_ms
-        
+
         # Cap at max delay
         base_delay = min(base_delay, self.max_delay_ms)
-        
+
         # Apply jitter
         if self.jitter_strategy == JitterStrategy.NONE:
             delay = base_delay
@@ -304,10 +304,10 @@ class RetryInterceptor(BaseInterceptor):
         else:  # DECORRELATED
             prev = self._previous_delays.get(stage_name, self.base_delay_ms)
             delay = min(self.max_delay_ms, random.randint(self.base_delay_ms, prev * 3))
-        
+
         # Store for decorrelated jitter
         self._previous_delays[stage_name] = delay
-        
+
         return delay
 ```
 
@@ -335,17 +335,17 @@ Override retry settings for specific stages:
 ```python
 class HighReliabilityStage:
     """Stage that needs aggressive retries."""
-    
+
     name = "high_reliability"
     kind = StageKind.WORK
-    
+
     # Stage-specific retry config
     retry_config = {
         "max_attempts": 10,
         "base_delay_ms": 100,
         "backoff_strategy": "exponential",
     }
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         # Stage implementation
         ...
@@ -386,15 +386,15 @@ from stageflow.core import StageOutput
 
 class APICallStage:
     """Stage that calls an external API."""
-    
+
     name = "api_call"
     kind = StageKind.WORK
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         try:
             response = await self._call_api(ctx.inputs["request"])
             return StageOutput.ok(response=response)
-            
+
         except RateLimitError as e:
             # Signal that this stage should be retried
             return StageOutput.retry(
@@ -402,7 +402,7 @@ class APICallStage:
                 data={"retry_after_ms": e.retry_after * 1000},
                 # From API response
             )
-            
+
         except ValidationError as e:
             # Don't retry validation errors
             return StageOutput.fail(error=str(e))
@@ -513,24 +513,24 @@ from unittest.mock import AsyncMock, patch
 @pytest.mark.asyncio
 async def test_retry_on_transient_error():
     """Verify retry occurs on transient errors."""
-    
+
     call_count = 0
-    
+
     async def flaky_operation():
         nonlocal call_count
         call_count += 1
         if call_count < 3:
             raise ConnectionError("Temporary failure")
         return {"success": True}
-    
+
     stage = AsyncMock()
     stage.execute = flaky_operation
-    
+
     interceptor = RetryInterceptor(max_attempts=5)
-    
+
     # Execute with retry
     result = await run_with_interceptors(stage, interceptor)
-    
+
     assert result["success"]
     assert call_count == 3  # Failed twice, succeeded on third
 
@@ -538,40 +538,40 @@ async def test_retry_on_transient_error():
 @pytest.mark.asyncio
 async def test_no_retry_on_client_error():
     """Verify no retry on non-transient errors."""
-    
+
     call_count = 0
-    
+
     async def validation_error():
         nonlocal call_count
         call_count += 1
         raise ValueError("Invalid input")
-    
+
     stage = AsyncMock()
     stage.execute = validation_error
-    
+
     interceptor = RetryInterceptor(max_attempts=5)
-    
+
     with pytest.raises(ValueError):
         await run_with_interceptors(stage, interceptor)
-    
+
     assert call_count == 1  # No retries
 
 
 @pytest.mark.asyncio
 async def test_exponential_backoff_delays():
     """Verify exponential delay calculation."""
-    
+
     interceptor = RetryInterceptor(
         base_delay_ms=1000,
         backoff_strategy=BackoffStrategy.EXPONENTIAL,
         jitter_strategy=JitterStrategy.NONE,
     )
-    
+
     delays = [
         interceptor._calculate_delay("test", attempt)
         for attempt in range(5)
     ]
-    
+
     assert delays == [1000, 2000, 4000, 8000, 16000]
 ```
 

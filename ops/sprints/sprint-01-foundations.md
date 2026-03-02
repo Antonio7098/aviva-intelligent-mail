@@ -26,7 +26,7 @@
 
 - [x] **Task 1: Repository Structure & Module Boundaries**
     > *Description: Set up monorepo scaffold with clear module boundaries following SOLID principles and separation of concerns.*
-    - [x] **Sub-task 1.1:** Create directory structure: `app/`, `pipeline/`, `domain/`, `privacy/`, `audit/`, `store/`
+    - [x] **Sub-task 1.1:** Create directory structure: `src/app/`, `src/pipeline/`, `src/domain/`, `src/privacy/`, `src/audit/`, `src/store/`
     - [x] **Sub-task 1.2:** Set up `__init__.py` files and module hierarchy
     - [x] **Sub-task 1.3:** Add `.gitignore` for Python, secrets, and temporary files
     - [x] **Sub-task 1.4:** Create initial `README.md` with setup instructions
@@ -34,14 +34,14 @@
 - [x] **Task 2: FastAPI Service Skeleton**
     > *Description: Implement FastAPI application with health and readiness endpoints.*
     - [x] **Sub-task 2.1:** Install FastAPI, uvicorn, and dependencies
-    - [x] **Sub-task 2.2:** Create `app/main.py` with FastAPI app instance
+    - [x] **Sub-task 2.2:** Create `src/app/main.py` with FastAPI app instance
     - [x] **Sub-task 2.3:** Implement `GET /health` endpoint (liveness check)
     - [x] **Sub-task 2.4:** Implement `GET /ready` endpoint (readiness: DB connectivity, config loaded)
     - [x] **Sub-task 2.5:** Verify Swagger UI auto-generated at `/docs` and ReDoc at `/redoc`
 
 - [x] **Task 3: Configuration System**
     > *Description: Implement typed configuration system using Pydantic Settings with strict secret management.*
-    - [x] **Sub-task 3.1:** Create `app/config.py` with Pydantic Settings base class
+    - [x] **Sub-task 3.1:** Create `src/app/config.py` with Pydantic Settings base class
     - [x] **Sub-task 3.2:** Define configuration fields: database URL, LLM settings, logging levels, etc.
     - [x] **Sub-task 3.3:** Create `.env.example` file with all required variables
     - [x] **Sub-task 3.4:** Add validation to reject any configuration that would log raw content
@@ -191,7 +191,7 @@ This sprint is considered successful when:
 **Sprint Review Comments:**
 ```
 Sprint 1 complete. Delivered:
-- Monorepo structure with app/, pipeline/, domain/, privacy/, audit/, store/
+- Monorepo structure with src/app/, src/pipeline/, src/domain/, src/privacy/, src/audit/, src/store/
 - FastAPI with /health and /ready endpoints
 - Pydantic Settings config with privacy guardrails
 - GitHub Actions CI (lint, type-check, test, security)

@@ -255,11 +255,11 @@ class CustomJwtValidator:
     async def validate(self, token: str) -> dict[str, Any]:
         # Validate with your JWT library
         payload = decode_jwt(token)
-        
+
         # Extract required claims
         if not payload.get("user_id"):
             raise MissingClaimsError("Missing user_id claim", ["user_id"])
-            
+
         return payload
 ```
 
@@ -458,7 +458,7 @@ from stageflow.auth import JwtValidator, TokenExpiredError, InvalidTokenError
 class MyJwtValidator(JwtValidator):
     def __init__(self, secret_key: str):
         self.secret_key = secret_key
-    
+
     async def validate(self, token: str) -> dict[str, Any]:
         try:
             # Decode and validate JWT
@@ -468,13 +468,13 @@ class MyJwtValidator(JwtValidator):
                 algorithms=["HS256"],
                 options={"require": ["exp", "user_id", "session_id"]}
             )
-            
+
             # Check expiration
             if payload["exp"] < datetime.now().timestamp():
                 raise TokenExpiredError("Token has expired")
-            
+
             return payload
-            
+
         except jwt.ExpiredSignatureError:
             raise TokenExpiredError("Token has expired")
         except jwt.InvalidTokenError:
@@ -493,13 +493,13 @@ auth_interceptor = AuthInterceptor(MyJwtValidator("your-secret-key"))
 async def execute(self, ctx: StageContext) -> StageOutput:
     # Get resource from database
     resource = await get_resource(resource_id)
-    
+
     # Set resource org_id for enforcement
     ctx.data["_resource_org_id"] = resource.organization_id
-    
+
     # OrgEnforcementInterceptor will verify access
     # before this stage executes
-    
+
     return StageOutput.ok(resource=resource)
 ```
 

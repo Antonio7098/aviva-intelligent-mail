@@ -15,14 +15,14 @@ from stageflow import StageContext, StageKind, StageOutput
 
 class UppercaseStage:
     """Transform text to uppercase."""
-    
+
     name = "uppercase"
     kind = StageKind.TRANSFORM
 
     async def execute(self, ctx: StageContext) -> StageOutput:
         # Get input from the context snapshot
         text = ctx.snapshot.input_text or ""
-        
+
         # Transform and return
         result = text.upper()
         return StageOutput.ok(text=result)
@@ -30,14 +30,14 @@ class UppercaseStage:
 
 class AddExclamationStage:
     """Add exclamation marks to text."""
-    
+
     name = "exclaim"
     kind = StageKind.TRANSFORM
 
     async def execute(self, ctx: StageContext) -> StageOutput:
         # Get output from previous stage via StageInputs
         text = ctx.inputs.get_from("uppercase", "text", default="")
-        
+
         # Transform and return
         result = f"{text}!!!"
         return StageOutput.ok(text=result, excited=True)

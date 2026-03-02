@@ -86,14 +86,14 @@ from stageflow import StageContext, StageKind, StageOutput, Pipeline
 
 class ToolDispatcher(Stage):
     """Stage that executes tools via subpipelines."""
-    
+
     name = "tool_dispatcher"
     kind = StageKind.TRANSFORM
 
     async def execute(self, ctx: StageContext) -> StageOutput:
         tool_calls = ctx.inputs.get("tool_calls", [])
         pipeline_ctx = ctx.as_pipeline_context()
-        
+
         results = []
         for call in tool_calls:
             # Create child pipeline for each tool call
@@ -106,7 +106,7 @@ class ToolDispatcher(Stage):
                 topology=f"tool_{call.type}",
                 execution_mode="tool_execution",
             )
-            
+
             # Execute child pipeline
             result = await self._run_child_pipeline(
                 parent_ctx=ctx,
@@ -116,7 +116,7 @@ class ToolDispatcher(Stage):
                 tool_call=tool_call,
             )
             results.append(result)
-        
+
         return StageOutput.ok(tool_results=results)
 
     async def _run_child_pipeline(
@@ -129,7 +129,7 @@ class ToolDispatcher(Stage):
     ):
         # Build child graph
         graph = pipeline.build()
-        
+
         # Create child context (simplified example)
         child_snapshot = ContextSnapshot(
             run_id=RunIdentity(
@@ -146,7 +146,7 @@ class ToolDispatcher(Stage):
         )
 
         child_ctx = create_test_stage_context(snapshot=child_snapshot)
-        
+
         # Run child pipeline
         try:
             results = await graph.run(child_ctx)
@@ -348,14 +348,14 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     # Check for cancellation before spawning children
     if ctx.as_pipeline_context().canceled:
         return StageOutput.cancel(reason="Parent cancelled")
-    
+
     # Track child tasks for cancellation
     child_tasks = []
-    
+
     for tool_call in tool_calls:
         task = asyncio.create_task(self._run_child(tool_call))
         child_tasks.append(task)
-    
+
     # Wait with cancellation support
     try:
         results = await asyncio.gather(*child_tasks)
@@ -432,10 +432,10 @@ def create_tool_pipeline(tool_type: str) -> Pipeline:
 ```python
 class DelegatingAgentStage:
     """Agent that delegates to specialized sub-agents."""
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         intent = self._classify_intent(ctx.snapshot.input_text)
-        
+
         if intent == "document_edit":
             # Delegate to document agent via subpipeline
             result = await self._delegate_to_agent(
@@ -451,7 +451,7 @@ class DelegatingAgentStage:
         else:
             # Handle directly
             result = await self._handle_directly(ctx)
-        
+
         return StageOutput.ok(response=result)
 ```
 

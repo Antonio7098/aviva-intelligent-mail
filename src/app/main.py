@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.logging_config import CorrelationIdMiddleware, setup_logging, get_logger
+from src.app.logging_config import CorrelationIdMiddleware, setup_logging, get_logger
 
 
 @asynccontextmanager

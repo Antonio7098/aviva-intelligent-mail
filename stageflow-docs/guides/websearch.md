@@ -32,7 +32,7 @@ async def main():
     async with WebSearchClient() as client:
         # Fetch a single page
         page = await client.fetch("https://example.com")
-        
+
         print(f"Title: {page.title}")
         print(f"Content:\n{page.markdown}")
         print(f"Links found: {len(page.links)}")
@@ -235,10 +235,10 @@ page = await client.fetch("https://example.com/results?page=2")
 if page.pagination:
     print(f"Current page: {page.pagination.current_page}")
     print(f"Total pages: {page.pagination.total_pages}")
-    
+
     if page.pagination.has_next:
         next_page = await client.fetch(page.pagination.next_url)
-    
+
     if page.pagination.has_prev:
         prev_page = await client.fetch(page.pagination.prev_url)
 ```
@@ -377,21 +377,21 @@ from stageflow.websearch import WebSearchClient
 class WebSearchStage:
     name = "web_search"
     kind = StageKind.ENRICH
-    
+
     def __init__(self):
         self.client = WebSearchClient()
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         url = ctx.inputs.get_from("router", "search_url")
-        
+
         page = await self.client.fetch(url)
-        
+
         if not page.success:
             return StageOutput.error(f"Failed to fetch: {page.error}")
-        
+
         # Store in enrichments format
         web_results = [page.to_dict()]
-        
+
         return StageOutput.ok(
             web_results=web_results,
             page_title=page.title,
@@ -409,22 +409,22 @@ class WebFetchTool(BaseTool):
     name = "web_fetch"
     description = "Fetch and extract content from a web page"
     action_type = "WEB_FETCH"
-    
+
     def __init__(self):
         self.client = WebSearchClient()
-    
+
     async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
         url = input.payload.get("url")
         selector = input.payload.get("selector")
-        
+
         page = await self.client.fetch(url, selector=selector)
-        
+
         if not page.success:
             return ToolOutput(
                 success=False,
                 error=page.error,
             )
-        
+
         return ToolOutput(
             success=True,
             data={
@@ -475,10 +475,10 @@ async def test_web_search_stage():
             {"content-type": "text/html"},
         ),
     }
-    
+
     client = create_mock_client(responses)
     page = await client.fetch("https://example.com")
-    
+
     assert page.success
     assert "Test" in page.markdown
 ```

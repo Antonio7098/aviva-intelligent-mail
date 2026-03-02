@@ -43,7 +43,7 @@ Failures that won't succeed on retry.
 async def execute(self, ctx: StageContext) -> StageOutput:
     if not ctx.snapshot.user_id:
         return StageOutput.fail(error="user_id is required")
-    
+
     try:
         result = await self.service.get_user(ctx.snapshot.user_id)
     except NotFoundError:
@@ -67,7 +67,7 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     # Validate required inputs
     if not ctx.inputs.has_output("required_stage"):
         return StageOutput.fail(error="Missing required input: required_key")
-    
+
     value = ctx.inputs.get_from("required_stage", "required_key")
     if not isinstance(value, str):
         return StageOutput.fail(error=f"Expected string, got {type(value).__name__}")
@@ -115,7 +115,7 @@ from stageflow.auth import CrossTenantAccessError
 
 async def execute(self, ctx: StageContext) -> StageOutput:
     item = await self.db.get_item(item_id)
-    
+
     if item.org_id != ctx.snapshot.org_id:
         return StageOutput.fail(
             error="Access denied: resource belongs to another organization",
@@ -319,14 +319,14 @@ async def execute(self, ctx: StageContext) -> StageOutput:
 async def execute(self, ctx: StageContext) -> StageOutput:
     results = []
     errors = []
-    
+
     for item in items:
         try:
             result = await self.process(item)
             results.append(result)
         except Exception as e:
             errors.append({"item": item, "error": str(e)})
-    
+
     # Return partial success
     return StageOutput.ok(
         results=results,
@@ -342,11 +342,11 @@ from stageflow.observability import get_circuit_breaker, CircuitBreakerOpenError
 
 async def execute(self, ctx: StageContext) -> StageOutput:
     breaker = get_circuit_breaker()
-    
+
     if await breaker.is_open(operation="llm", provider="openai"):
         # Use fallback provider
         return await self._call_fallback_provider(ctx)
-    
+
     try:
         result = await self.openai_client.chat(...)
         await breaker.record_success(operation="llm", provider="openai")
@@ -411,10 +411,10 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     # Validate early
     if not ctx.snapshot.input_text:
         return StageOutput.fail(error="input_text is required")
-    
+
     if len(ctx.snapshot.input_text) > 10000:
         return StageOutput.fail(error="input_text exceeds maximum length")
-    
+
     # Continue with valid input...
 ```
 

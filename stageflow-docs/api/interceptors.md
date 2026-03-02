@@ -344,24 +344,24 @@ from stageflow import (
 class RateLimitInterceptor(BaseInterceptor):
     name = "rate_limit"
     priority = 15
-    
+
     def __init__(self, max_per_minute: int = 60):
         self.max_per_minute = max_per_minute
         self._counts = {}
-    
+
     async def before(self, stage_name: str, ctx) -> InterceptorResult | None:
         user_id = str(ctx.user_id)
         count = self._counts.get(user_id, 0)
-        
+
         if count >= self.max_per_minute:
             return InterceptorResult(
                 stage_ran=False,
                 error="Rate limit exceeded",
             )
-        
+
         self._counts[user_id] = count + 1
         return None
-    
+
     async def after(self, stage_name: str, result, ctx) -> None:
         pass
 

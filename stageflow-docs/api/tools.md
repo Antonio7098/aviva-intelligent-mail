@@ -45,7 +45,7 @@ class MyTool(BaseTool):
     name = "my_tool"
     description = "Does something useful"
     action_type = "MY_ACTION"
-    
+
     async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
         return ToolOutput(success=True, data={"result": "done"})
 ```
@@ -616,7 +616,7 @@ class GreetTool(BaseTool):
     name = "greet"
     description = "Greet a user"
     action_type = "GREET"
-    
+
     async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
         name = input.action.payload.get("name", "World")
         return ToolOutput.ok(data={"message": f"Hello, {name}!"})

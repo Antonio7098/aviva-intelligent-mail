@@ -97,7 +97,7 @@ class RouterStage:
         input_text = ctx.inputs.get("text", ctx.snapshot.input_text or "")
 
         lower_text = input_text.lower()
-        
+
         if "help" in lower_text or "support" in lower_text:
             route = "support"
         elif "buy" in lower_text or "price" in lower_text:
@@ -207,14 +207,14 @@ class LLMStage:
 
     def _build_system_prompt(self, route: str, profile: dict, memory: dict) -> str:
         parts = ["You are a helpful AI assistant."]
-        
+
         if profile.get("display_name"):
             parts.append(f"You're talking to {profile['display_name']}.")
         if profile.get("goals"):
             parts.append(f"Their goals: {', '.join(profile['goals'][:3])}")
         if memory.get("recent_topics"):
             parts.append(f"Recent topics: {', '.join(memory['recent_topics'][:3])}")
-        
+
         return " ".join(parts)
 ```
 
@@ -231,14 +231,14 @@ def create_full_pipeline(
     memory_service=None,
 ) -> Pipeline:
     """Create a full-featured pipeline with all stage types.
-    
+
     DAG:
         [input_guard] → [router] ─┐
                                   │
         [profile_enrich] ─────────┼─> [llm] → [output_guard]
                                   │
         [memory_enrich] ──────────┘
-    
+
     Features:
     - Guard stages (input/output validation)
     - Route stages (path selection)
@@ -316,14 +316,14 @@ class Memory:
 
 class MockGuardService:
     BLOCKED_WORDS = ["spam", "abuse", "hack"]
-    
+
     async def check_input(self, text: str) -> tuple[bool, str]:
         await asyncio.sleep(0.05)
         for word in self.BLOCKED_WORDS:
             if word in text.lower():
                 return False, f"Contains blocked word: {word}"
         return True, ""
-    
+
     async def check_output(self, text: str) -> tuple[bool, str]:
         await asyncio.sleep(0.05)
         return True, ""
@@ -359,10 +359,10 @@ class MockLLMClient:
 class InputGuardStage:
     name = "input_guard"
     kind = StageKind.GUARD
-    
+
     def __init__(self, service):
         self.service = service or MockGuardService()
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         text = ctx.snapshot.input_text or ""
         is_safe, reason = await self.service.check_input(text)
@@ -374,7 +374,7 @@ class InputGuardStage:
 class RouterStage:
     name = "router"
     kind = StageKind.ROUTE
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         text = ctx.snapshot.input_text or ""
         lower_text = text.lower()
@@ -390,10 +390,10 @@ class RouterStage:
 class ProfileEnrichStage:
     name = "profile_enrich"
     kind = StageKind.ENRICH
-    
+
     def __init__(self, service):
         self.service = service or MockProfileService()
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         if not ctx.snapshot.user_id:
             return StageOutput.skip(reason="No user_id")
@@ -404,10 +404,10 @@ class ProfileEnrichStage:
 class MemoryEnrichStage:
     name = "memory_enrich"
     kind = StageKind.ENRICH
-    
+
     def __init__(self, service):
         self.service = service or MockMemoryService()
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         if not ctx.snapshot.session_id:
             return StageOutput.skip(reason="No session_id")
@@ -418,10 +418,10 @@ class MemoryEnrichStage:
 class LLMStage:
     name = "llm"
     kind = StageKind.TRANSFORM
-    
+
     def __init__(self, client):
         self.client = client or MockLLMClient()
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         text = ctx.snapshot.input_text or ""
         messages = [{"role": "system", "content": "You are helpful."}, {"role": "user", "content": text}]
@@ -432,10 +432,10 @@ class LLMStage:
 class OutputGuardStage:
     name = "output_guard"
     kind = StageKind.GUARD
-    
+
     def __init__(self, service):
         self.service = service or MockGuardService()
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         response = ctx.inputs.get("response", "")
         return StageOutput.ok(response=response, validated=True)
@@ -447,7 +447,7 @@ async def main():
     profile = MockProfileService()
     memory = MockMemoryService()
     llm = MockLLMClient()
-    
+
     # Create pipeline
     pipeline = (
         Pipeline()
@@ -458,9 +458,9 @@ async def main():
         .with_stage("llm", LLMStage(llm), StageKind.TRANSFORM, dependencies=("router", "profile_enrich", "memory_enrich"))
         .with_stage("output_guard", OutputGuardStage(guard), StageKind.GUARD, dependencies=("llm",))
     )
-    
+
     graph = pipeline.build()
-    
+
     # Test 1: Normal input
     print("=== Test 1: Normal Input ===")
     pipeline_ctx = PipelineContext(
@@ -469,12 +469,12 @@ async def main():
         input_text="Hello, I need help with Python!",
     )
     results = await graph.run(pipeline_ctx)
-    
+
     print(f"Route: {results['router'].data.get('route')}")
     print(f"Profile: {results['profile_enrich'].data.get('profile')}")
     print(f"Response: {results['output_guard'].data.get('response')}")
     print()
-    
+
     # Test 2: Blocked input
     print("=== Test 2: Blocked Input ===")
     pipeline_ctx2 = PipelineContext(
