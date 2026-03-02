@@ -123,6 +123,7 @@ This sprint is considered successful when:
 - [ ] Testing completed and passed
 - [ ] Code review completed
 - [ ] Documentation updated (including `docs/` directory)
+- [ ] Configuration: `.env` created from `.env.example` (if applicable)
 
 **Developer Name:** __________________________
 
