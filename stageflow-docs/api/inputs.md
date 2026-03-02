@@ -217,13 +217,13 @@ inputs = create_stage_inputs(
 async def execute(self, ctx: StageContext) -> StageOutput:
     # Get any value from prior stages
     text = ctx.inputs.get("text", default="")
-    
+
     # Get specific value from a stage
     route = ctx.inputs.get_from("router", "route", default="general")
-    
+
     # Get required value (raises if missing)
     user_id = ctx.inputs.require_from("auth", "user_id")
-    
+
     return StageOutput.ok(processed_text=text.upper())
 ```
 
@@ -231,14 +231,14 @@ async def execute(self, ctx: StageContext) -> StageOutput:
 
 ```python
 # In pipeline definition
-pipeline.with_stage("my_stage", MyStage, StageKind.WORK, 
+pipeline.with_stage("my_stage", MyStage, StageKind.WORK,
                    dependencies=["auth", "router"]))  # Declared deps
 
 # In stage implementation
 async def execute(self, ctx: StageContext) -> StageOutput:
     # This works - "auth" is declared
     token = ctx.inputs.get_from("auth", "token")
-    
+
     # This raises UndeclaredDependencyError - "cache" not declared
     cached = ctx.inputs.get_from("cache", "data")  # Error!
 ```
@@ -254,7 +254,7 @@ async def execute(self, ctx: StageContext) -> StageOutput:
         return StageOutput.fail(error=f"Missing auth token: {e}")
     except UndeclaredDependencyError as e:
         return StageOutput.fail(error=f"Dependency error: {e}")
-    
+
     # Continue with token...
 ```
 
@@ -266,10 +266,10 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     ports = ctx.inputs.ports
     if ports and ports.db:
         await ports.db.save_interaction(...)
-    
+
     if ports and hasattr(ports, 'llm') and ports.llm:
         response = await ports.llm.chat(messages)
-    
+
     return StageOutput.ok()
 ```
 

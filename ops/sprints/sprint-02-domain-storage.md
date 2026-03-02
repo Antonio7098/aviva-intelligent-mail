@@ -166,6 +166,15 @@ This sprint is considered successful when:
 
 ---
 
+## 🔧 Commit Guidelines
+
+- Make atomic commits (one logical change per commit)
+- Commit early and often
+- Ensure all changes are committed before marking sprint complete
+- Run `git diff` before committing to review what was changed
+
+---
+
 ## 🔄 Review & Sign-off
 
 **Sprint Status:** [Not Started / In Progress / Completed / Blocked]

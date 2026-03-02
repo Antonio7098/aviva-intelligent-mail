@@ -87,19 +87,19 @@ from stageflow.helpers import parse_timestamp
 
 class TimestampExtractStage:
     """Extract and normalize timestamps from documents."""
-    
+
     name = "timestamp_extract"
     kind = StageKind.TRANSFORM
-    
+
     def __init__(self, timestamp_fields: list[str] | None = None) -> None:
         self.timestamp_fields = timestamp_fields or [
             "created_at", "updated_at", "timestamp", "date", "time"
         ]
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         document = ctx.inputs["document"]
         extracted = {}
-        
+
         for field in self.timestamp_fields:
             if field in document:
                 try:
@@ -110,7 +110,7 @@ class TimestampExtractStage:
                         "timestamp.parse_failed",
                         {"field": field, "value": str(document[field])[:100], "error": str(e)},
                     )
-        
+
         return StageOutput.ok(
             timestamps=extracted,
             document={**document, **extracted},
@@ -125,21 +125,21 @@ from stageflow.helpers import parse_timestamp, detect_unix_precision
 
 class APIResponseNormalizerStage:
     """Normalize timestamps in API responses."""
-    
+
     name = "api_normalizer"
     kind = StageKind.TRANSFORM
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         response = ctx.inputs["api_response"]
-        
+
         normalized = self._normalize_timestamps(response)
-        
+
         return StageOutput.ok(normalized_response=normalized)
-    
+
     def _normalize_timestamps(self, data: dict) -> dict:
         """Recursively normalize timestamps in nested data."""
         result = {}
-        
+
         for key, value in data.items():
             if isinstance(value, dict):
                 result[key] = self._normalize_timestamps(value)
@@ -153,27 +153,27 @@ class APIResponseNormalizerStage:
                 result[key] = self._try_parse_timestamp(value)
             else:
                 result[key] = value
-        
+
         return result
-    
+
     def _looks_like_timestamp(self, key: str, value) -> bool:
         """Heuristic check if field might be a timestamp."""
         timestamp_keys = {"timestamp", "time", "date", "created", "updated", "at"}
         key_lower = key.lower()
-        
+
         # Check key name
         if any(ts_key in key_lower for ts_key in timestamp_keys):
             return True
-        
+
         # Check value format
         if isinstance(value, (int, float)) and value > 1_000_000_000:
             return True
-        
+
         if isinstance(value, str) and ("T" in value or "GMT" in value):
             return True
-        
+
         return False
-    
+
     def _try_parse_timestamp(self, value) -> str | Any:
         """Try to parse as timestamp, return original on failure."""
         try:
@@ -192,30 +192,30 @@ from stageflow.helpers import normalize_to_utc
 
 class TemporalFilterStage:
     """Filter records by timestamp range."""
-    
+
     name = "temporal_filter"
     kind = StageKind.TRANSFORM
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         records = ctx.inputs["records"]
         start_time = ctx.inputs.get("start_time")
         end_time = ctx.inputs.get("end_time")
-        
+
         # Normalize filter bounds to UTC
         start_utc = normalize_to_utc(parse_timestamp(start_time)) if start_time else None
         end_utc = normalize_to_utc(parse_timestamp(end_time)) if end_time else None
-        
+
         filtered = []
         for record in records:
             record_time = normalize_to_utc(parse_timestamp(record["timestamp"]))
-            
+
             if start_utc and record_time < start_utc:
                 continue
             if end_utc and record_time > end_utc:
                 continue
-            
+
             filtered.append(record)
-        
+
         return StageOutput.ok(
             filtered_records=filtered,
             count=len(filtered),
@@ -261,16 +261,16 @@ from datetime import datetime, timezone
 def validate_timestamp(value: int | str) -> datetime:
     """Validate and parse timestamp with sanity checks."""
     dt = parse_timestamp(value)
-    
+
     # Reject future timestamps
     if dt > datetime.now(timezone.utc):
         raise ValueError(f"Timestamp {dt} is in the future")
-    
+
     # Reject very old timestamps (before Unix epoch commonly used)
     min_date = datetime(1970, 1, 1, tzinfo=timezone.utc)
     if dt < min_date:
         raise ValueError(f"Timestamp {dt} is before 1970")
-    
+
     return dt
 ```
 
@@ -285,10 +285,10 @@ def safe_parse_timestamp(value: Any, default: datetime | None = None) -> datetim
     """Safely parse timestamp with fallback."""
     if value is None:
         return default
-    
+
     if value == "" or value == "null":
         return default
-    
+
     try:
         return parse_timestamp(value)
     except (ValueError, TypeError):
@@ -307,7 +307,7 @@ from stageflow.helpers import parse_timestamp
 
 class TimestampParseError(Exception):
     """Raised when timestamp parsing fails."""
-    
+
     def __init__(self, value: Any, format_hint: str | None = None) -> None:
         self.value = value
         self.format_hint = format_hint
@@ -329,7 +329,7 @@ def strict_parse_timestamp(value: Any) -> datetime:
         elif isinstance(value, int):
             if value > 10**18:
                 hint = "Integer too large, expected seconds/milliseconds/microseconds"
-        
+
         raise TimestampParseError(value, hint) from e
 ```
 

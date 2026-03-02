@@ -120,7 +120,7 @@ from stageflow import Pipeline, StageKind
 
 def create_transform_pipeline() -> Pipeline:
     """Create a linear chain of transform stages.
-    
+
     DAG:
         [uppercase] → [reverse] → [summarize]
     """
@@ -225,19 +225,19 @@ async def main():
         .with_stage("reverse", ReverseStage, StageKind.TRANSFORM, dependencies=("uppercase",))
         .with_stage("summarize", SummarizeStage, StageKind.TRANSFORM, dependencies=("reverse",))
     )
-    
+
     # Build and create context
     graph = pipeline.build()
-    
+
     pipeline_ctx = PipelineContext(
         topology="transform_chain",
         execution_mode="default",
         input_text="Hello, this is a test of the transform chain!",
     )
-    
+
     # Run
     results = await graph.run(pipeline_ctx)
-    
+
     # Show transformation at each step
     print("Input:", pipeline_ctx.input_text)
     print()
@@ -327,11 +327,11 @@ A conditional stage can return `StageOutput.skip()` to be skipped:
 class ConditionalReverseStage:
     async def execute(self, ctx: StageContext) -> StageOutput:
         text = ctx.inputs.get("text", "")
-        
+
         # Skip if text is too short
         if len(text) < 10:
             return StageOutput.skip(reason="Text too short to reverse")
-        
+
         return StageOutput.ok(text=text[::-1])
 ```
 

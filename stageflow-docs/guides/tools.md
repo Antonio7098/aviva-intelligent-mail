@@ -25,19 +25,19 @@ from stageflow.tools.base import ToolInput, ToolOutput
 
 class GreetTool:
     """A simple greeting tool."""
-    
+
     @property
     def name(self) -> str:
         return "greet"
-    
+
     @property
     def description(self) -> str:
         return "Greet a user by name"
-    
+
     @property
     def action_type(self) -> str:
         return "GREET"
-    
+
     async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
         name = input.action.payload.get("name", "World")
         return ToolOutput(
@@ -58,13 +58,13 @@ class CalculatorTool(BaseTool):
     name = "calculator"
     description = "Perform basic arithmetic"
     action_type = "CALCULATE"
-    
+
     async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
         payload = input.action.payload
         operation = payload.get("operation")
         a = payload.get("a", 0)
         b = payload.get("b", 0)
-        
+
         if operation == "add":
             result = a + b
         elif operation == "subtract":
@@ -77,7 +77,7 @@ class CalculatorTool(BaseTool):
             result = a / b
         else:
             return ToolOutput(success=False, error=f"Unknown operation: {operation}")
-        
+
         return ToolOutput(success=True, data={"result": result})
 ```
 
@@ -102,7 +102,7 @@ class SearchTool(BaseTool):
     name = "search"
     description = "Search for information"
     action_type = "SEARCH"
-    
+
     async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
         query = input.action.payload.get("query", "")
         # Perform search...
@@ -219,9 +219,9 @@ async def edit_document_handler(input: ToolInput) -> ToolOutput:
     """Handler for document editing."""
     doc_id = input.payload.get("document_id")
     changes = input.payload.get("changes", [])
-    
+
     # Apply changes...
-    
+
     return ToolOutput.ok(
         data={"document_id": doc_id, "changes_applied": len(changes)},
         undo_metadata={"original_content": "..."},  # For undo
@@ -276,9 +276,9 @@ else:
 async def toggle_handler(input: ToolInput) -> ToolOutput:
     current_state = get_current_state()
     new_state = input.payload.get("state", not current_state)
-    
+
     set_state(new_state)
-    
+
     return ToolOutput.ok(
         data={"state": new_state},
         undo_metadata={"previous_state": current_state},
@@ -561,16 +561,16 @@ from stageflow.tools import get_tool_registry
 class AgentStage:
     name = "agent"
     kind = StageKind.AGENT
-    
+
     def __init__(self):
         self.registry = get_tool_registry()
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         input_text = ctx.snapshot.input_text or ""
-        
+
         # Parse intent and create actions
         actions = self._parse_intent(input_text)
-        
+
         # Execute actions
         results = []
         for action in actions:
@@ -587,21 +587,21 @@ class AgentStage:
                     "success": False,
                     "error": str(e),
                 })
-        
+
         # Generate response
         response = self._generate_response(results)
-        
+
         return StageOutput.ok(
             response=response,
             actions_executed=len(results),
             action_results=results,
         )
-    
+
     def _parse_intent(self, text: str) -> list:
         """Parse user intent into actions."""
         # Your intent parsing logic here
         ...
-    
+
     def _generate_response(self, results: list) -> str:
         """Generate response based on action results."""
         # Your response generation logic here
@@ -614,39 +614,39 @@ class AgentStage:
 class LLMAgentStage:
     name = "llm_agent"
     kind = StageKind.AGENT
-    
+
     def __init__(self, llm_client, tool_registry):
         self.llm_client = llm_client
         self.registry = tool_registry
-    
+
     async def execute(self, ctx: StageContext) -> StageOutput:
         messages = self._build_messages(ctx)
         tools = self._get_tool_schemas()
-        
+
         # Call LLM with tools
         response = await self.llm_client.chat(
             messages=messages,
             tools=tools,
         )
-        
+
         # Execute any tool calls
         tool_results = []
         for tool_call in response.tool_calls:
             action = self._tool_call_to_action(tool_call)
             result = await self.registry.execute(action, ctx.to_dict())
             tool_results.append(result)
-        
+
         # If tools were called, get final response
         if tool_results:
             messages.append({"role": "assistant", "tool_calls": response.tool_calls})
             messages.append({"role": "tool", "content": str(tool_results)})
             response = await self.llm_client.chat(messages=messages)
-        
+
         return StageOutput.ok(
             response=response.content,
             tool_results=tool_results,
         )
-    
+
     def _get_tool_schemas(self) -> list:
         """Get tool schemas for LLM."""
         return [
@@ -744,12 +744,12 @@ async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
     # Validate required fields
     if "document_id" not in input.payload:
         return ToolOutput.fail("document_id is required")
-    
+
     # Validate types
     doc_id = input.payload["document_id"]
     if not isinstance(doc_id, str):
         return ToolOutput.fail("document_id must be a string")
-    
+
     # Continue with valid input...
 ```
 
@@ -773,10 +773,10 @@ Make destructive actions undoable:
 async def delete_handler(input: ToolInput) -> ToolOutput:
     # Store data needed for undo
     item = await get_item(input.payload["id"])
-    
+
     # Perform deletion
     await delete_item(input.payload["id"])
-    
+
     return ToolOutput.ok(
         data={"deleted_id": input.payload["id"]},
         undo_metadata={"item_data": item.to_dict()},

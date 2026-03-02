@@ -75,7 +75,7 @@ async def main():
     # PipelineContext is the single entry-point context.
     pipeline_ctx = PipelineContext(input_text="Hello, Stageflow!")
     results = await graph.run(pipeline_ctx)
-    
+
     print(results["hello"].data)  # {'message': 'Hello, Stageflow!'}
 
     # Optional: emit quick telemetry from the queue helpers

@@ -14,7 +14,7 @@ This directory contains detailed sprint plans following the [Sprint Template](..
 
 | Sprint | Name | Status | Duration |
 |---------|-------|--------|-----------|
-| 1 | Foundations | Not Started | TBD |
+| 1 | Foundations | In Progress | TBD |
 | 2 | Domain Model & Storage | Not Started | TBD |
 | 3 | Ingestion & Pipeline Wiring | Not Started | TBD |
 | 4 | Privacy Layer | Not Started | TBD |

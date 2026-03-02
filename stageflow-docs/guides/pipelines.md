@@ -521,7 +521,7 @@ Add comments showing the DAG structure:
 ```python
 def create_full_pipeline() -> Pipeline:
     """Create the full chat pipeline.
-    
+
     DAG:
         [input_guard] → [router] ─┐
                                   │

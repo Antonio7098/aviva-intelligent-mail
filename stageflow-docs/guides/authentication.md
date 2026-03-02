@@ -81,7 +81,7 @@ from typing import Any
 
 class MyJwtValidator:
     """Custom JWT validator."""
-    
+
     async def validate(self, token: str) -> dict[str, Any]:
         # Validate token with your auth provider
         # (Clerk, Auth0, WorkOS, etc.)
@@ -167,7 +167,7 @@ from typing import Any
 class ClerkJwtValidator:
     def __init__(self, clerk_secret_key: str):
         self.secret_key = clerk_secret_key
-    
+
     async def validate(self, token: str) -> dict[str, Any]:
         # Verify JWT signature and claims
         claims = await self._verify_token(token)
@@ -179,7 +179,7 @@ class ClerkJwtValidator:
             "org_id": claims.get("org_id"),
             "roles": claims.get("roles", []),
         }
-    
+
     async def _verify_token(self, token: str) -> dict[str, Any]:
         # Use Clerk's SDK or verify manually
         ...
@@ -219,7 +219,7 @@ from stageflow import BaseInterceptor, InterceptorResult, ErrorAction
 class AuthErrorHandlerInterceptor(BaseInterceptor):
     name = "auth_error_handler"
     priority = 0  # Run before auth interceptor
-    
+
     async def on_error(self, stage_name, error, ctx):
         if isinstance(error, AuthenticationError):
             # Log the attempt
@@ -259,7 +259,7 @@ from stageflow.auth import (
 async def execute(self, ctx: StageContext) -> StageOutput:
     # Auth context is injected via StageInputs ports
     auth_context = getattr(ctx.inputs.ports, "auth", None) if ctx.inputs.ports else None
-    
+
     if auth_context:
         user_id = auth_context.user_id
         is_admin = auth_context.is_admin()
@@ -286,13 +286,13 @@ Use org_id for data filtering:
 class DataStage:
     async def execute(self, ctx: StageContext) -> StageOutput:
         org_id = ctx.snapshot.org_id
-        
+
         # Always filter by org_id
         data = await self.db.query(
             "SELECT * FROM items WHERE org_id = $1",
             org_id,
         )
-        
+
         return StageOutput.ok(items=data)
 ```
 
@@ -302,13 +302,13 @@ class DataStage:
 class SecureDataStage:
     async def execute(self, ctx: StageContext) -> StageOutput:
         org_id = ctx.snapshot.org_id
-        
+
         # Verify ownership before returning
         items = await self.db.get_items(item_ids)
-        
+
         # Filter to only items belonging to this org
         owned_items = [i for i in items if i.org_id == org_id]
-        
+
         return StageOutput.ok(items=owned_items)
 ```
 
@@ -321,15 +321,15 @@ class ItemStage:
     async def execute(self, ctx: StageContext) -> StageOutput:
         item_id = ctx.snapshot.input_text
         org_id = ctx.snapshot.org_id
-        
+
         item = await self.db.get_item(item_id)
-        
+
         # Verify ownership
         if item.org_id != org_id:
             raise CrossTenantAccessError(
                 f"Item {item_id} belongs to another organization"
             )
-        
+
         return StageOutput.ok(item=item)
 ```
 
@@ -341,13 +341,13 @@ class ItemStage:
 class AdminStage:
     async def execute(self, ctx: StageContext) -> StageOutput:
         auth = getattr(ctx.inputs.ports, "auth", None) if ctx.inputs.ports else None
-        
+
         if not auth or not auth.is_admin():
             return StageOutput.cancel(
                 reason="Admin access required",
                 data={"error": "unauthorized"},
             )
-        
+
         # Admin-only logic
         ...
 ```

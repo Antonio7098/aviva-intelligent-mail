@@ -188,10 +188,10 @@ Create pipeline variants based on features:
 ```python
 def create_pipeline(features: set[str]) -> Pipeline:
     pipeline = Pipeline().with_stage("input", InputStage, StageKind.TRANSFORM)
-    
+
     if "enrichment" in features:
         pipeline = pipeline.with_stage("enrich", EnrichStage, StageKind.ENRICH)
-    
+
     if "guardrails" in features:
         pipeline = pipeline.with_stage(
             "guard",
@@ -199,21 +199,21 @@ def create_pipeline(features: set[str]) -> Pipeline:
             StageKind.GUARD,
             dependencies=("input",),
         )
-    
+
     # LLM depends on whatever stages are present
     deps = ["input"]
     if "enrichment" in features:
         deps.append("enrich")
     if "guardrails" in features:
         deps.append("guard")
-    
+
     pipeline = pipeline.with_stage(
         "llm",
         LLMStage,
         StageKind.TRANSFORM,
         dependencies=tuple(deps),
     )
-    
+
     return pipeline
 
 # Create variants
@@ -276,7 +276,7 @@ class PipelineBuilder:
         self.profile_service = profile_service
         self.memory_service = memory_service
         self.guard_service = guard_service
-    
+
     def build_chat_pipeline(self) -> Pipeline:
         return (
             Pipeline()
@@ -370,15 +370,15 @@ Add stages conditionally:
 ```python
 def create_adaptive_pipeline(ctx) -> Pipeline:
     pipeline = Pipeline().with_stage("input", InputStage, StageKind.TRANSFORM)
-    
+
     # Add enrichment only for authenticated users
     if ctx.user_id:
         pipeline = pipeline.with_stage("profile", ProfileEnrichStage, StageKind.ENRICH)
-    
+
     # Add premium features for pro users
     if ctx.plan_tier in ("pro", "enterprise"):
         pipeline = pipeline.with_stage("advanced", AdvancedStage, StageKind.TRANSFORM)
-    
+
     return pipeline
 ```
 
@@ -473,7 +473,7 @@ def create_llm_component(
     dependencies: tuple[str, ...] = ("router", "enrich"),
 ) -> Pipeline:
     """Create LLM component.
-    
+
     Args:
         dependencies: Stages that must complete before LLM.
                      Default: ("router", "enrich")
@@ -508,7 +508,7 @@ Test each component in isolation:
 def test_enrichment_component():
     pipeline = create_enrichment_component()
     graph = pipeline.build()
-    
+
     # Verify stages
     assert "profile" in [s.name for s in graph.stage_specs]
     assert "memory" in [s.name for s in graph.stage_specs]

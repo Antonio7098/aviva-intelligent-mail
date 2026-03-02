@@ -31,17 +31,17 @@ class TogglePanelTool(BaseTool):
     async def execute(self, input: ToolInput, ctx: dict) -> ToolOutput:
         payload = input.action.payload
         new_state = payload.get("state", not self._panel_state)
-        
+
         # Update state
         old_state = self._panel_state
         TogglePanelTool._panel_state = new_state
-        
+
         # Generate message
         if new_state:
             message = "Panel has been turned ON"
         else:
             message = "Panel has been turned OFF"
-        
+
         return ToolOutput(
             success=True,
             data={
@@ -126,7 +126,7 @@ class AgentStage:
 
         # Parse intent and create actions
         actions = self._parse_intent(input_text)
-        
+
         # Execute actions
         results = []
         for action in actions:
@@ -216,7 +216,7 @@ from stageflow import Pipeline, StageKind
 
 def create_agent_demo_pipeline() -> Pipeline:
     """Create an agent pipeline with tool execution.
-    
+
     DAG:
         [dispatch] → [agent]
     """
@@ -259,7 +259,7 @@ class TogglePanelTool(BaseTool):
         new_state = input.action.payload.get("state", not self._panel_state)
         old_state = TogglePanelTool._panel_state
         TogglePanelTool._panel_state = new_state
-        
+
         message = "Panel turned ON" if new_state else "Panel turned OFF"
         return ToolOutput(
             success=True,
@@ -303,7 +303,7 @@ class AgentStage:
 
         # Parse intent
         actions = self._parse_intent(input_text)
-        
+
         # Execute tools
         results = []
         for action in actions:
@@ -337,12 +337,12 @@ class AgentStage:
     def _parse_intent(self, text: str) -> list[Action]:
         lower = text.lower()
         actions = []
-        
+
         if re.search(r"\b(turn|switch).*on\b|\benable\b|\bactivate\b", lower):
             actions.append(Action(id=uuid4(), type="TOGGLE_PANEL", payload={"state": True}))
         elif re.search(r"\b(turn|switch).*off\b|\bdisable\b|\bdeactivate\b", lower):
             actions.append(Action(id=uuid4(), type="TOGGLE_PANEL", payload={"state": False}))
-        
+
         return actions
 
 
@@ -353,9 +353,9 @@ async def main():
         .with_stage("dispatch", DispatchStage, StageKind.ROUTE)
         .with_stage("agent", AgentStage(), StageKind.AGENT, dependencies=("dispatch",))
     )
-    
+
     graph = pipeline.build()
-    
+
     # Test inputs
     test_inputs = [
         "Hello there!",
@@ -364,7 +364,7 @@ async def main():
         "Enable the panel",
         "Disable everything",
     ]
-    
+
     for input_text in test_inputs:
         pipeline_ctx = PipelineContext(
             topology="agent_demo",
@@ -373,7 +373,7 @@ async def main():
         )
 
         results = await graph.run(pipeline_ctx)
-        
+
         agent_output = results["agent"]
         print(f"Input: {input_text}")
         print(f"Response: {agent_output.data.get('response')}")
@@ -522,13 +522,13 @@ _document_content = {}
 async def edit_document_handler(input: ToolInput) -> ToolOutput:
     doc_id = input.payload.get("document_id")
     new_content = input.payload.get("content")
-    
+
     # Store original for undo
     original = _document_content.get(doc_id, "")
-    
+
     # Apply edit
     _document_content[doc_id] = new_content
-    
+
     return ToolOutput.ok(
         data={"document_id": doc_id, "updated": True},
         undo_metadata={"document_id": doc_id, "original_content": original},
@@ -568,13 +568,13 @@ admin_tool = ToolDefinition(
 class AdminAgentStage:
     async def execute(self, ctx: StageContext) -> StageOutput:
         execution_mode = ctx.snapshot.execution_mode
-        
+
         # Check if tool is allowed
         if not admin_tool.is_behavior_allowed(execution_mode):
             return StageOutput.ok(
                 response="Admin actions are not available in this mode.",
             )
-        
+
         # Execute tool...
 ```
 
@@ -583,7 +583,7 @@ class AdminAgentStage:
 ```python
 class LLMAgentStage:
     """Agent that uses LLM to decide which tools to call."""
-    
+
     name = "llm_agent"
     kind = StageKind.AGENT
 
@@ -593,7 +593,7 @@ class LLMAgentStage:
 
     async def execute(self, ctx: StageContext) -> StageOutput:
         input_text = ctx.snapshot.input_text or ""
-        
+
         # Get tool schemas for LLM
         tools = [
             {
@@ -606,13 +606,13 @@ class LLMAgentStage:
             }
             for tool in self.registry.list()
         ]
-        
+
         # Call LLM with tools
         response = await self.llm.chat(
             messages=[{"role": "user", "content": input_text}],
             tools=tools,
         )
-        
+
         # Execute tool calls parsed via registry helper
         results = []
         tool_calls = getattr(response, "tool_calls", []) or []
@@ -625,7 +625,7 @@ class LLMAgentStage:
             tool_input = ToolInput(action=call.arguments)
             result = await call.tool.execute(tool_input, ctx.to_dict())
             results.append(result)
-        
+
         return StageOutput.ok(
             response=response.content,
             tool_results=results,

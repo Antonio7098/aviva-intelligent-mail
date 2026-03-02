@@ -260,7 +260,7 @@ set_event_sink(LoggingEventSink())
 class MyEventSink:
     async def emit(self, *, type: str, data: dict) -> None:
         await save_to_database(type, data)
-    
+
     def try_emit(self, *, type: str, data: dict) -> None:
         asyncio.create_task(self.emit(type=type, data=data))
 ```

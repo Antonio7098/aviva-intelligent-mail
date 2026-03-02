@@ -58,19 +58,19 @@ Once running, visit:
 ## Project Structure
 
 ```
+src/
 ├── app/                    # FastAPI application
 ├── pipeline/               # Stageflow pipeline stages
 ├── domain/                 # Domain models (Pydantic)
-├── store/                  # Database and vector store
-├── llm/                    # LLM client and prompts
-├── privacy/                # PII redaction and sanitisation
-├── audit/                  # Audit event handling
-├── ops/                    # Operational docs
+├── store/                 # Database and vector store
+├── privacy/               # PII redaction and sanitisation
+├── audit/                 # Audit event handling
+tests/                     # Test suite
+ops/                       # Operational docs
 │   ├── sprints/            # Sprint plans
 │   └── code-review/        # Code review templates
-├── docs/                   # Business documentation
-├── stageflow-docs/         # Stageflow framework docs
-└── eval/                   # Evaluation datasets and runners
+docs/                      # Business documentation
+stageflow-docs/            # Stageflow framework docs
 ```
 
 ## Core Principles

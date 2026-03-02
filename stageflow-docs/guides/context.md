@@ -52,7 +52,7 @@ It is:
   - artifacts and observability metadata
   - event sink
   - subpipeline correlation (parent_run_id, parent_stage_id, correlation_id)
-  
+
   live for the lifetime of the run.
 
 A simplified view of the important fields:
@@ -123,11 +123,11 @@ snapshot = ContextSnapshot(
         org_id=uuid4(),
         interaction_id=uuid4(),
     ),
-    
+
     # Configuration
     topology="chat_fast",
     execution_mode="practice",
-    
+
     # Input
     input_text="Hello, how are you?",
     conversation=Conversation(
@@ -136,7 +136,7 @@ snapshot = ContextSnapshot(
             Message(role="assistant", content="Hello!", timestamp=datetime.now(timezone.utc)),
         ],
     ),
-    
+
     # Enrichments bundle (optional)
     enrichments=Enrichments(
         profile=ProfileEnrichment(
@@ -150,10 +150,10 @@ snapshot = ContextSnapshot(
             key_facts=["prefers examples"],
         ),
     ),
-    
+
     # Extensions (application-specific)
     extensions={"skills": {"active_skill_ids": ["python"]}},
-    
+
     # Metadata
     metadata={"source": "web_chat"},
 )
@@ -213,7 +213,7 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     # Configuration is typically provided via constructor args or injected ports
     timeout = 30
     model = "default"
-    
+
     # Shared timer for consistent timing
     elapsed = ctx.timer.elapsed_ms()
 ```
@@ -227,17 +227,17 @@ from stageflow.stages.inputs import StageInputs
 
 async def execute(self, ctx: StageContext) -> StageOutput:
     inputs: StageInputs = ctx.inputs
-    
+
     # Get any key from upstream outputs (searches all prior stages)
     processed_text = inputs.get("text")
-    
+
     # Get from a specific stage (preferred - explicit dependency)
     route = inputs.get_from("router", "route", default="general")
-    
+
     # Check if a stage has produced output
     if inputs.has_output("validator"):
         validation = inputs.get_output("validator")
-    
+
     # Access injected services through ports
     if inputs.ports and inputs.ports.db:
         await inputs.ports.db.save(...)
@@ -269,11 +269,11 @@ async def execute(self, ctx: StageContext) -> StageOutput:
 async def execute(self, ctx: StageContext) -> StageOutput:
     # Emit custom events
     ctx.emit_event("custom.started", {"step": 1})
-    
+
     # Do work...
-    
+
     ctx.emit_event("custom.completed", {"step": 1, "result": "success"})
-    
+
     return StageOutput.ok(...)
 ```
 
@@ -348,7 +348,7 @@ Always handle cases where upstream data might be missing:
 async def execute(self, ctx: StageContext) -> StageOutput:
     # With default value
     value = ctx.inputs.get("optional_key", default="fallback")
-    
+
     # Check before use
     if ctx.inputs.has_output("required_stage"):
         data = ctx.inputs.get_from("required_stage", "required_key")
@@ -537,13 +537,13 @@ messages = [
 ```python
 async def execute(self, ctx: StageContext) -> StageOutput:
     messages = ctx.snapshot.messages
-    
+
     # Get last N messages
     recent = messages[-5:]
-    
+
     # Filter by role
     user_messages = [m for m in messages if m.role == "user"]
-    
+
     # Convert for LLM
     llm_messages = [
         {"role": m.role, "content": m.content}
@@ -607,7 +607,7 @@ async def execute(self, ctx: StageContext) -> StageOutput:
     user_id = ctx.snapshot.user_id
     if not user_id:
         return StageOutput.skip(reason="No user_id provided")
-    
+
     # Continue with valid data...
 ```
 
@@ -618,11 +618,11 @@ Make it clear what your stage expects and produces:
 ```python
 class MyStage:
     """Process user input.
-    
+
     Inputs:
         - snapshot.input_text: Raw user input
         - upstream.validated: Boolean from guard stage
-    
+
     Outputs:
         - processed_text: Transformed text
         - word_count: Number of words

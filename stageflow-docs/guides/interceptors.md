@@ -256,13 +256,13 @@ from stageflow import InterceptorContext
 async def before(self, stage_name: str, ctx: PipelineContext) -> None:
     # Create interceptor context
     i_ctx = InterceptorContext(ctx, _interceptor_name=self.name)
-    
+
     # Add observation
     i_ctx.add_observation("start_time", time.time())
 
 async def after(self, stage_name: str, result: StageResult, ctx: PipelineContext) -> None:
     i_ctx = InterceptorContext(ctx, _interceptor_name=self.name)
-    
+
     # Retrieve observation
     start_time = i_ctx.get_observation("start_time")
     duration = time.time() - start_time
@@ -277,36 +277,36 @@ from stageflow import BaseInterceptor, InterceptorResult
 
 class RateLimitInterceptor(BaseInterceptor):
     """Limit stage executions per user."""
-    
+
     name = "rate_limit"
     priority = 15  # After circuit breaker, before tracing
-    
+
     def __init__(self, max_requests: int = 100, window_seconds: int = 60):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self._requests: dict[str, list[float]] = defaultdict(list)
-    
+
     async def before(self, stage_name: str, ctx: PipelineContext) -> InterceptorResult | None:
         user_id = str(ctx.user_id) if ctx.user_id else "anonymous"
         now = time.time()
-        
+
         # Clean old requests
         cutoff = now - self.window_seconds
         self._requests[user_id] = [
             t for t in self._requests[user_id] if t > cutoff
         ]
-        
+
         # Check limit
         if len(self._requests[user_id]) >= self.max_requests:
             return InterceptorResult(
                 stage_ran=False,
                 error=f"Rate limit exceeded for user {user_id}",
             )
-        
+
         # Record request
         self._requests[user_id].append(now)
         return None
-    
+
     async def after(self, stage_name: str, result: StageResult, ctx: PipelineContext) -> None:
         pass  # Nothing to do after
 ```
@@ -321,15 +321,15 @@ from stageflow.stages.result import StageResult
 
 class CachingInterceptor(BaseInterceptor):
     """Cache stage results based on input."""
-    
+
     name = "caching"
     priority = 25  # After tracing
 
-    
+
     def __init__(self, cache_stages: set[str] | None = None):
         self.cache_stages = cache_stages or set()
         self._cache: dict[str, StageResult] = {}
-    
+
     def _cache_key(self, stage_name: str, ctx: PipelineContext) -> str:
         """Generate cache key from stage name and relevant context."""
         key_data = {
@@ -338,11 +338,11 @@ class CachingInterceptor(BaseInterceptor):
             "user_id": str(ctx.user_id) if ctx.user_id else None,
         }
         return hashlib.sha256(json.dumps(key_data, sort_keys=True).encode()).hexdigest()
-    
+
     async def before(self, stage_name: str, ctx: PipelineContext) -> InterceptorResult | None:
         if stage_name not in self.cache_stages:
             return None
-        
+
         cache_key = self._cache_key(stage_name, ctx)
         if cache_key in self._cache:
             cached = self._cache[cache_key]
@@ -350,11 +350,11 @@ class CachingInterceptor(BaseInterceptor):
                 stage_ran=False,
                 result=cached.data,
             )
-        
+
         # Store key for after()
         ctx.data[f"_cache_key.{stage_name}"] = cache_key
         return None
-    
+
     async def after(self, stage_name: str, result: StageResult, ctx: PipelineContext) -> None:
         cache_key = ctx.data.pop(f"_cache_key.{stage_name}", None)
         if cache_key and result.status == "completed":

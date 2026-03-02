@@ -217,17 +217,17 @@ from stageflow import EventSink
 
 class DatabaseEventSink:
     """Store events in a database."""
-    
+
     def __init__(self, db):
         self.db = db
-    
+
     async def emit(self, *, type: str, data: dict | None) -> None:
         await self.db.insert("events", {
             "type": type,
             "data": data,
             "timestamp": datetime.now(timezone.utc),
         })
-    
+
     def try_emit(self, *, type: str, data: dict | None) -> None:
         import asyncio
         asyncio.create_task(self.emit(type=type, data=data))
@@ -251,14 +251,14 @@ class MyStage:
             "step": "validation",
             "input_size": len(ctx.snapshot.input_text or ""),
         })
-        
+
         # Do work...
-        
+
         ctx.try_emit_event("custom.processing_completed", {
             "step": "validation",
             "result": "passed",
         })
-        
+
         return StageOutput.ok(...)
 ```
 
@@ -286,11 +286,11 @@ await emit_event(type="app.started", data={"version": "1.0"})
 class FilteredEventSink:
     def __init__(self, include_types: set[str]):
         self.include_types = include_types
-    
+
     async def emit(self, *, type: str, data: dict | None) -> None:
         if any(type.startswith(t) for t in self.include_types):
             print(f"Event: {type} - {data}")
-    
+
     def try_emit(self, *, type: str, data: dict | None) -> None:
         asyncio.create_task(self.emit(type=type, data=data))
 

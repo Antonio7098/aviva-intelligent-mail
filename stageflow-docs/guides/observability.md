@@ -25,7 +25,7 @@ class EventSink(Protocol):
     async def emit(self, *, type: str, data: dict) -> None:
         """Emit an event asynchronously."""
         ...
-    
+
     def try_emit(self, *, type: str, data: dict) -> None:
         """Emit an event without blocking (fire-and-forget)."""
         ...
@@ -96,17 +96,17 @@ from datetime import datetime, timezone
 
 class DatabaseEventSink:
     """Store events in a database."""
-    
+
     def __init__(self, db):
         self.db = db
-    
+
     async def emit(self, *, type: str, data: dict) -> None:
         await self.db.insert("pipeline_events", {
             "type": type,
             "data": data,
             "timestamp": datetime.now(timezone.utc),
         })
-    
+
     def try_emit(self, *, type: str, data: dict) -> None:
         # Fire-and-forget
         asyncio.create_task(self.emit(type=type, data=data))
@@ -195,14 +195,14 @@ async def execute(self, ctx: StageContext) -> StageOutput:
         "step": "validation",
         "input_size": len(ctx.snapshot.input_text or ""),
     })
-    
+
     # Do work...
-    
+
     ctx.emit_event("custom.processing_completed", {
         "step": "validation",
         "result": "passed",
     })
-    
+
     return StageOutput.ok(...)
 ```
 
@@ -268,7 +268,7 @@ set_correlation_id(uuid4())
 # Correlation ID survives across async boundaries
 async def process_request():
     cid = get_correlation_id()  # Available here
-    
+
     # Pass to child tasks
     ctx = TraceContext.capture()
     await asyncio.create_task(worker(ctx))
@@ -288,14 +288,14 @@ from stageflow.observability import StageflowTracer, OTEL_AVAILABLE
 
 if OTEL_AVAILABLE:
     tracer = StageflowTracer("my_service")
-    
+
     with tracer.start_span("process_request") as span:
         span.set_attribute("user_id", str(user_id))
-        
+
         with tracer.start_span("database_query") as db_span:
             db_span.set_attribute("table", "users")
             results = await db.query()
-        
+
         span.set_attribute("result_count", len(results))
 ```
 
@@ -339,7 +339,7 @@ tracer = StageflowTracer("tenant_service")
 with tracer.start_span("tenant_operation") as span:
     span.set_attribute("org_id", str(tenant_ctx.org_id))
     span.set_attribute("tenant", tenant_ctx.metadata.get("tenant_name"))
-    
+
     # Tenant-aware logging
     logger = tenant_ctx.get_logger("tenant_service")
     logger.info("Processing tenant request")
@@ -479,13 +479,13 @@ from your_metrics import counter, histogram
 class PrometheusMetricsInterceptor(BaseInterceptor):
     name = "prometheus_metrics"
     priority = 40
-    
+
     async def before(self, stage_name: str, ctx) -> None:
         counter("stage_started_total", labels={"stage": stage_name}).inc()
-    
+
     async def after(self, stage_name: str, result, ctx) -> None:
         duration_ms = (result.ended_at - result.started_at).total_seconds() * 1000
-        
+
         histogram("stage_duration_seconds", labels={"stage": stage_name}).observe(duration_ms / 1000)
         counter("stage_completed_total", labels={
             "stage": stage_name,
@@ -518,7 +518,7 @@ tracer = trace.get_tracer(__name__)
 class OpenTelemetryInterceptor(BaseInterceptor):
     name = "opentelemetry"
     priority = 20
-    
+
     async def before(self, stage_name: str, ctx) -> None:
         span = tracer.start_span(
             f"stage.{stage_name}",
@@ -530,12 +530,12 @@ class OpenTelemetryInterceptor(BaseInterceptor):
             },
         )
         ctx.data[f"_otel_span.{stage_name}"] = span
-    
+
     async def after(self, stage_name: str, result, ctx) -> None:
         span = ctx.data.pop(f"_otel_span.{stage_name}", None)
         if span:
             span.set_attribute("stage.status", result.status)
-            span.set_attribute("stage.duration_ms", 
+            span.set_attribute("stage.duration_ms",
                 (result.ended_at - result.started_at).total_seconds() * 1000)
             span.end()
 ```
@@ -589,7 +589,7 @@ from datetime import datetime, timezone
 class DatabasePipelineRunLogger:
     def __init__(self, db):
         self.db = db
-    
+
     async def log_run_started(self, *, pipeline_run_id, pipeline_name, **kwargs):
         await self.db.insert("pipeline_runs", {
             "id": pipeline_run_id,
@@ -598,14 +598,14 @@ class DatabasePipelineRunLogger:
             "started_at": datetime.now(timezone.utc),
             **kwargs,
         })
-    
+
     async def log_run_completed(self, *, pipeline_run_id, duration_ms, status, **kwargs):
         await self.db.update("pipeline_runs", pipeline_run_id, {
             "status": status,
             "duration_ms": duration_ms,
             "completed_at": datetime.now(timezone.utc),
         })
-    
+
     async def log_run_failed(self, *, pipeline_run_id, error, stage, **kwargs):
         await self.db.update("pipeline_runs", pipeline_run_id, {
             "status": "failed",
@@ -657,11 +657,11 @@ class LLMStage:
             model_id="gpt-4",
             pipeline_run_id=ctx.pipeline_run_id,
         )
-        
+
         start = time.time()
         try:
             response = await self.llm_client.chat(...)
-            
+
             # Log success
             await provider_call_logger.log_call_end(
                 call_id,
@@ -669,7 +669,7 @@ class LLMStage:
                 latency_ms=int((time.time() - start) * 1000),
                 tokens_used=response.usage.total_tokens,
             )
-            
+
             return StageOutput.ok(response=response.content)
         except Exception as e:
             # Log failure
@@ -728,7 +728,7 @@ except Exception as e:
     #     "message": "Stage timed out after 30000ms",
     #     "retryable": True,
     # }
-    
+
     error_str = error_summary_to_string(summary)
     # "TIMEOUT: Stage timed out after 30000ms"
 ```

@@ -64,7 +64,7 @@ from stageflow import Pipeline, StageKind
 
 def create_simple_pipeline() -> Pipeline:
     """Create a simple single-stage pipeline.
-    
+
     DAG:
         [echo]
     """
@@ -104,20 +104,20 @@ class EchoStage:
 async def main():
     # Create the pipeline
     pipeline = Pipeline().with_stage("echo", EchoStage, StageKind.TRANSFORM)
-    
+
     # Build the executable graph
     graph = pipeline.build()
-    
+
     # Create the pipeline entry context
     pipeline_ctx = PipelineContext(
         topology="simple",
         execution_mode="default",
         input_text="Hello, Stageflow!",
     )
-    
+
     # Run the pipeline
     results = await graph.run(pipeline_ctx)
-    
+
     # Access results
     echo_output = results["echo"]
     print(f"Status: {echo_output.status.value}")

@@ -94,16 +94,16 @@ class SummarizeStage:
 
         # Build summary
         summary_parts = []
-        
+
         if profile.get("display_name"):
             summary_parts.append(f"User: {profile['display_name']}")
-        
+
         if profile.get("goals"):
             summary_parts.append(f"Goals: {', '.join(profile['goals'][:2])}")
-        
+
         if memory.get("recent_topics"):
             summary_parts.append(f"Recent topics: {', '.join(memory['recent_topics'][:3])}")
-        
+
         if memory.get("key_facts"):
             summary_parts.append(f"Key facts: {', '.join(memory['key_facts'][:2])}")
 
@@ -135,7 +135,7 @@ from stageflow import Pipeline, StageKind
 
 def create_parallel_pipeline() -> Pipeline:
     """Create a pipeline with parallel enrichment stages.
-    
+
     DAG:
         [profile_enrich] ─┐
                           ├─> [summarize]
@@ -231,7 +231,7 @@ class ProfileEnrichStage:
         user_id = ctx.snapshot.user_id
         if not user_id:
             return StageOutput.skip(reason="No user_id")
-        
+
         profile = await self.service.get_profile(user_id)
         return StageOutput.ok(profile={
             "display_name": profile.display_name,
@@ -250,7 +250,7 @@ class MemoryEnrichStage:
         session_id = ctx.snapshot.session_id
         if not session_id:
             return StageOutput.skip(reason="No session_id")
-        
+
         memory = await self.service.get_memory(session_id)
         return StageOutput.ok(memory={
             "recent_topics": memory.recent_topics,
@@ -265,17 +265,17 @@ class SummarizeStage:
     async def execute(self, ctx: StageContext) -> StageOutput:
         profile = ctx.inputs.get("profile", {})
         memory = ctx.inputs.get("memory", {})
-        
+
         summary = f"User: {profile.get('display_name', 'Unknown')}"
         if memory.get("recent_topics"):
             summary += f" | Topics: {', '.join(memory['recent_topics'])}"
-        
+
         return StageOutput.ok(summary=summary)
 
 
 async def main():
     import time
-    
+
     # Create pipeline
     pipeline = (
         Pipeline()
@@ -288,19 +288,19 @@ async def main():
             dependencies=("profile_enrich", "memory_enrich"),
         )
     )
-    
+
     graph = pipeline.build()
-    
+
     pipeline_ctx = PipelineContext(
         topology="parallel",
         execution_mode="default",
     )
-    
+
     # Time the execution
     start = time.time()
     results = await graph.run(pipeline_ctx)
     elapsed = time.time() - start
-    
+
     # Results
     print("Profile:", results["profile_enrich"].data.get("profile"))
     print("Memory:", results["memory_enrich"].data.get("memory"))
@@ -344,7 +344,7 @@ When an enrichment stage skips, the aggregator still runs:
 
 ```python
         summary = " | ".join(parts) if parts else "No enrichment data available"
-        
+
         return StageOutput.ok(summary=summary)
 ```
 
