@@ -115,6 +115,7 @@ Review steps (follow in order):
 - Are new config flags documented?
 - Is runbook updated if required?
 - Are migration instructions clear?
+- Is changelog updated (`changelog.json`)?
 
 ---
 
