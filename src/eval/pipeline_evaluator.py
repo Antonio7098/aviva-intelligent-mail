@@ -340,7 +340,13 @@ class PipelineEvaluator(BaseEvalRunner):
         return tags
 
     def _compute_hash(self, email: dict[str, Any]) -> str:
-        """Compute pseudonymous hash of an email."""
+        """Compute pseudonymous hash of an email.
+
+        Uses the provided email_hash from the dataset if available,
+        otherwise computes from content.
+        """
+        if "email_hash" in email and email["email_hash"]:
+            return email["email_hash"]
         content = email.get("subject", "") + email.get("body", "")
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
@@ -445,19 +451,26 @@ class PipelineEvaluator(BaseEvalRunner):
         for preds, labs in zip(action_preds, action_labels):
             true_positives += len(preds & labs)
 
+        total_pred_actions = sum(len(p) for p in action_preds)
+        total_label_actions = sum(len(label) for label in action_labels)
+
         action_precision = (
-            true_positives / sum(len(p) for p in action_preds) if action_preds else 0.0
+            true_positives / total_pred_actions if total_pred_actions > 0 else 0.0
         )
         action_recall = (
-            true_positives / sum(len(label) for label in action_labels)
-            if action_labels
-            else 0.0
+            true_positives / total_label_actions if total_label_actions > 0 else 0.0
         )
 
         latencies.sort()
         avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
-        p95_latency = latencies[int(len(latencies) * 0.95)] if latencies else 0.0
-        p99_latency = latencies[int(len(latencies) * 0.99)] if latencies else 0.0
+        p95_idx = int(len(latencies) * 0.95) if latencies else 0
+        p99_idx = int(len(latencies) * 0.99) if latencies else 0
+        p95_latency = (
+            latencies[p95_idx] if latencies and p95_idx < len(latencies) else 0.0
+        )
+        p99_latency = (
+            latencies[p99_idx] if latencies and p99_idx < len(latencies) else 0.0
+        )
 
         f1_scores = []
         for cls, acc in classification_accuracy_per_class.items():

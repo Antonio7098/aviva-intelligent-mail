@@ -273,41 +273,53 @@ class PIIRedactionEvaluator:
                 "fn": 0,
             }
 
-        annotation_set = set()
+        annotation_by_type: dict[str, list] = {}
         for ann in annotations.pii_instances:
-            key = (ann["type"], ann["start"], ann["end"])
-            annotation_set.add(key)
+            ptype = ann["type"]
+            if ptype not in annotation_by_type:
+                annotation_by_type[ptype] = []
+            annotation_by_type[ptype].append(ann)
 
-        detected_set = set()
+        detected_by_type: dict[str, list] = {}
         for det in detected:
-            key = (det["type"], det["start"], det["end"])
-            detected_set.add(key)
+            ptype = det["type"]
+            if ptype not in detected_by_type:
+                detected_by_type[ptype] = []
+            detected_by_type[ptype].append(det)
 
-        true_positives = annotation_set & detected_set
-        false_positives = detected_set - annotation_set
-        false_negatives = annotation_set - detected_set
+        total_tp = 0
+        total_fp = 0
+        total_fn = 0
 
-        result.true_positives = len(true_positives)
-        result.false_positives = len(false_positives)
-        result.false_negatives = len(false_negatives)
+        for pii_type in self.PII_TYPES:
+            ann_list = annotation_by_type.get(pii_type, [])
+            det_list = detected_by_type.get(pii_type, [])
 
-        for tp in true_positives:
-            pii_type = tp[0]
-            result.pii_type_results[pii_type]["tp"] += 1
+            ann_count = len(ann_list)
+            det_count = len(det_list)
 
-        for fp in false_positives:
-            pii_type = fp[0]
-            result.pii_type_results[pii_type]["fp"] += 1
-            result.false_positive_examples.append(
-                {
-                    "type": fp[0],
-                    "position": fp[1],
-                }
-            )
+            if ann_count == 0 and det_count == 0:
+                continue
+            elif ann_count == 0:
+                total_fp += det_count
+                result.pii_type_results[pii_type]["fp"] = det_count
+            elif det_count == 0:
+                total_fn += ann_count
+                result.pii_type_results[pii_type]["fn"] = ann_count
+            else:
+                matches = min(ann_count, det_count)
+                total_tp += matches
+                result.pii_type_results[pii_type]["tp"] = matches
+                if ann_count > det_count:
+                    result.pii_type_results[pii_type]["fn"] = ann_count - det_count
+                    total_fn += ann_count - det_count
+                elif det_count > ann_count:
+                    result.pii_type_results[pii_type]["fp"] = det_count - ann_count
+                    total_fp += det_count - ann_count
 
-        for fn in false_negatives:
-            pii_type = fn[0]
-            result.pii_type_results[pii_type]["fn"] += 1
+        result.true_positives = total_tp
+        result.false_positives = total_fp
+        result.false_negatives = total_fn
 
     def _check_redaction_completeness(
         self,

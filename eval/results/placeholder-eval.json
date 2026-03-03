@@ -1,0 +1,335 @@
+{
+  "metrics": {
+    "total_emails": 20,
+    "classification_accuracy": 0.65,
+    "classification_accuracy_per_class": {
+      "new_claim": 1.0,
+      "claim_update": 0.4166666666666667,
+      "general": 1.0,
+      "policy_inquiry": 1.0
+    },
+    "macro_f1_score": 0.8541666666666666,
+    "p1_recall": 0.6666666666666666,
+    "p1_false_negative_rate": 0.3333333333333333,
+    "action_precision": 0.4583333333333333,
+    "action_recall": 0.4230769230769231,
+    "priority_agreement": 0.45,
+    "average_latency_ms": 0.04286766052246094,
+    "p95_latency_ms": 0.0705718994140625,
+    "p99_latency_ms": 0.0705718994140625
+  },
+  "results": [
+    {
+      "email_hash": "a1b2c3d4e5f6",
+      "predicted_classification": "new_claim",
+      "predicted_priority": "p1_critical",
+      "predicted_actions": [
+        "call_back",
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.85,
+      "is_correct_classification": true,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.06365776062011719
+    },
+    {
+      "email_hash": "b2c3d4e5f6a1",
+      "predicted_classification": "new_claim",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "call_back"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.85,
+      "is_correct_classification": true,
+      "is_correct_priority": false,
+      "is_correct_actions": false,
+      "latency_ms": 0.0705718994140625
+    },
+    {
+      "email_hash": "c3d4e5f6a1b2",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": true,
+      "is_correct_priority": false,
+      "is_correct_actions": false,
+      "latency_ms": 0.047206878662109375
+    },
+    {
+      "email_hash": "d4e5f6a1b2c3",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": true,
+      "is_correct_priority": false,
+      "is_correct_actions": true,
+      "latency_ms": 0.03933906555175781
+    },
+    {
+      "email_hash": "e5f6a1b2c3d4",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": false,
+      "is_correct_priority": false,
+      "is_correct_actions": true,
+      "latency_ms": 0.03886222839355469
+    },
+    {
+      "email_hash": "f6a1b2c3d4e5",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [],
+      "confidence": 0.75,
+      "is_correct_classification": false,
+      "is_correct_priority": false,
+      "is_correct_actions": true,
+      "latency_ms": 0.05316734313964844
+    },
+    {
+      "email_hash": "a1b2c3d4e5f6g",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p1_critical",
+      "predicted_actions": [
+        "call_back",
+        "escalate"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": false,
+      "is_correct_priority": false,
+      "is_correct_actions": false,
+      "latency_ms": 0.029325485229492188
+    },
+    {
+      "email_hash": "b2c3d4e5f6g1",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p1_critical",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": false,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.030040740966796875
+    },
+    {
+      "email_hash": "c3d4e5f6g1h2",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": false,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.02574920654296875
+    },
+    {
+      "email_hash": "d4e5f6g1h2i3",
+      "predicted_classification": "general",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [],
+      "confidence": 0.6,
+      "is_correct_classification": true,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.05245208740234375
+    },
+    {
+      "email_hash": "e5f6g1h2i3j4",
+      "predicted_classification": "general",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [],
+      "confidence": 0.6,
+      "is_correct_classification": true,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.03457069396972656
+    },
+    {
+      "email_hash": "f6g1h2i3j4k5",
+      "predicted_classification": "general",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [],
+      "confidence": 0.6,
+      "is_correct_classification": true,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.03719329833984375
+    },
+    {
+      "email_hash": "g1h2i3j4k5l6",
+      "predicted_classification": "general",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "manual_review"
+      ],
+      "predicted_risk_tags": [
+        "fraud_suspicion"
+      ],
+      "confidence": 0.6,
+      "is_correct_classification": true,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.03719329833984375
+    },
+    {
+      "email_hash": "h2i3j4k5l6m7",
+      "predicted_classification": "general",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "regulatory"
+      ],
+      "confidence": 0.6,
+      "is_correct_classification": true,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.04458427429199219
+    },
+    {
+      "email_hash": "i3j4k5l6m7n8",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [],
+      "confidence": 0.75,
+      "is_correct_classification": false,
+      "is_correct_priority": false,
+      "is_correct_actions": true,
+      "latency_ms": 0.031232833862304688
+    },
+    {
+      "email_hash": "j4k5l6m7n8o9",
+      "predicted_classification": "policy_inquiry",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [],
+      "confidence": 0.7,
+      "is_correct_classification": true,
+      "is_correct_priority": false,
+      "is_correct_actions": true,
+      "latency_ms": 0.03910064697265625
+    },
+    {
+      "email_hash": "k5l6m7n8o9p0",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "call_back",
+        "escalate"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": false,
+      "is_correct_priority": false,
+      "is_correct_actions": false,
+      "latency_ms": 0.06318092346191406
+    },
+    {
+      "email_hash": "l6m7n8o9p0q1",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p2_high",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": true,
+      "is_correct_priority": true,
+      "is_correct_actions": false,
+      "latency_ms": 0.03457069396972656
+    },
+    {
+      "email_hash": "m7n8o9p0q1r2",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "call_back",
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": true,
+      "is_correct_priority": false,
+      "is_correct_actions": false,
+      "latency_ms": 0.042438507080078125
+    },
+    {
+      "email_hash": "n8o9p0q1r2s3",
+      "predicted_classification": "claim_update",
+      "predicted_priority": "p4_low",
+      "predicted_actions": [
+        "email_response"
+      ],
+      "predicted_risk_tags": [
+        "legal"
+      ],
+      "confidence": 0.75,
+      "is_correct_classification": true,
+      "is_correct_priority": false,
+      "is_correct_actions": false,
+      "latency_ms": 0.04291534423828125
+    }
+  ]
+}
