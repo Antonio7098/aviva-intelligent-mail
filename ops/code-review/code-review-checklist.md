@@ -53,7 +53,6 @@
 ## Documentation & Process
 - [ ] New config flags documented
 - [ ] Migration instructions clear
-- [ ] changelog.json updated
 - [ ] Git diff reviewed
 - [ ] Changes committed and pushed
 

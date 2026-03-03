@@ -1,12 +1,15 @@
 import hashlib
 import json
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from src.audit.sink import AuditSinkError
 from src.domain.audit import AuditEvent, AuditEventCreate
 from src.store.database import Database
+
+if TYPE_CHECKING:
+    from src.privacy.sanitizer import PrivacySanitizer
 
 
 class PostgresAuditSink:
@@ -25,7 +28,9 @@ class PostgresAuditSink:
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     """
 
-    def __init__(self, database: Database, privacy_sanitizer: Any = None):
+    def __init__(
+        self, database: Database, privacy_sanitizer: "PrivacySanitizer | None" = None
+    ):
         """Initialize the PostgresAuditSink.
 
         Args:
@@ -36,12 +41,12 @@ class PostgresAuditSink:
         self._privacy_sanitizer = privacy_sanitizer
 
     @property
-    def privacy_sanitizer(self) -> Any:
+    def privacy_sanitizer(self) -> "PrivacySanitizer | None":
         """Get the privacy sanitizer."""
         return self._privacy_sanitizer
 
     @privacy_sanitizer.setter
-    def privacy_sanitizer(self, sanitizer: Any) -> None:
+    def privacy_sanitizer(self, sanitizer: "PrivacySanitizer | None") -> None:
         """Set the privacy sanitizer."""
         self._privacy_sanitizer = sanitizer
 

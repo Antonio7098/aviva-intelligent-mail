@@ -17,6 +17,7 @@ import stageflow
 from src.audit.postgres_sink import PostgresAuditSink
 from src.pipeline.graph import create_email_pipeline
 from src.pipeline.stages.audit_emitter import AuditEmitter
+from src.privacy.event_sanitizer import EventSanitizer
 from src.store.postgres_db import PostgresDatabase
 
 logging.basicConfig(
@@ -103,7 +104,7 @@ async def process_email_batch(
     database = PostgresDatabase(database_url)
     await database.connect()
 
-    audit_sink = PostgresAuditSink(database)
+    audit_sink = PostgresAuditSink(database, EventSanitizer(safe_mode=False))
     audit_emitter = AuditEmitter(audit_sink=audit_sink)
 
     pipeline = create_email_pipeline(database=database, audit_emitter=audit_emitter)

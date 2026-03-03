@@ -58,6 +58,27 @@ class ReadModelWriterStage:
     def audit_emitter(self, emitter: AuditEmitter) -> None:
         self._audit_emitter = emitter
 
+    async def _emit_failure_event(
+        self, ctx: StageContext, error_type: str, error_message: str
+    ) -> None:
+        """Emit a failure audit event."""
+        if not self._audit_emitter:
+            return
+
+        email_hash = ctx.inputs.get("email_hash", "ERROR_NO_EMAIL_HASH")
+
+        await self._audit_emitter.emit(
+            correlation_id=ctx.snapshot.request_id,
+            email_hash=email_hash,
+            event_type="PERSISTENCE_FAILED",
+            stage=self.name,
+            status="failed",
+            payload={
+                "error_type": error_type,
+                "error_message": error_message[:500],
+            },
+        )
+
     async def _write_decision(self, decision: TriageDecision) -> None:
         """Write triage decision to database.
 
@@ -181,6 +202,7 @@ class ReadModelWriterStage:
 
         except Exception as e:
             logger.exception("Error in persistence stage")
+            await self._emit_failure_event(ctx, type(e).__name__, str(e))
             return StageOutput.fail(
                 error=f"Persistence error: {e}",
                 data={"stage": self.name, "error_type": type(e).__name__},

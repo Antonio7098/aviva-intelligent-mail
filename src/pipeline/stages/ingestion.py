@@ -44,6 +44,49 @@ class EmailIngestionStage:
     def audit_emitter(self, emitter: AuditEmitter) -> None:
         self._audit_emitter = emitter
 
+    async def _emit_failure_event(
+        self,
+        ctx: StageContext,
+        error_type: str,
+        error_message: str,
+        raw_data: str | dict | None = None,
+    ) -> None:
+        """Emit a failure audit event.
+
+        Args:
+            ctx: Stage context
+            error_type: Type of error that occurred
+            error_message: Error message
+            raw_data: Optional raw data that caused the error (for debugging)
+        """
+        if not self._audit_emitter:
+            return
+
+        correlation_id = ctx.snapshot.request_id
+        batch_correlation_id = ctx.snapshot.pipeline_run_id
+
+        payload: dict[str, Any] = {
+            "error_type": error_type,
+            "error_message": error_message[:500],
+            "batch_correlation_id": str(batch_correlation_id),
+        }
+
+        if raw_data:
+            if isinstance(raw_data, dict):
+                payload["failed_field_count"] = len(raw_data)
+                payload["failed_fields"] = list(raw_data.keys())[:10]
+            else:
+                payload["raw_data_length"] = len(str(raw_data))
+
+        await self._audit_emitter.emit(
+            correlation_id=correlation_id,
+            email_hash="ERROR_NO_EMAIL_HASH",
+            event_type="EMAIL_INGESTED_FAILED",
+            stage=self.name,
+            status="failed",
+            payload=payload,
+        )
+
     def _parse_email_json(self, data: dict[str, Any]) -> EmailRecord:
         """Parse and validate email JSON data.
 
@@ -157,18 +200,35 @@ class EmailIngestionStage:
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse JSON", extra={"error": str(e)})
+            await self._emit_failure_event(
+                ctx=ctx,
+                error_type="JSONDecodeError",
+                error_message=str(e),
+                raw_data=raw_data if isinstance(raw_data, str) else None,
+            )
             return StageOutput.fail(
                 error=f"Invalid JSON: {e}",
                 data={"stage": self.name, "error_type": "JSONDecodeError"},
             )
         except ValidationError as e:
             logger.error("Validation failed", extra={"errors": e.errors()})
+            await self._emit_failure_event(
+                ctx=ctx,
+                error_type="ValidationError",
+                error_message=str(e),
+                raw_data=raw_data if isinstance(raw_data, dict) else None,
+            )
             return StageOutput.fail(
                 error=f"Validation error: {e}",
                 data={"stage": self.name, "error_type": "ValidationError"},
             )
         except Exception as e:
             logger.exception("Unexpected error in ingestion stage")
+            await self._emit_failure_event(
+                ctx=ctx,
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
             return StageOutput.fail(
                 error=f"Unexpected error: {e}",
                 data={"stage": self.name, "error_type": type(e).__name__},

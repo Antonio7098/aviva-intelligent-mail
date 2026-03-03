@@ -123,6 +123,29 @@ class PlaceholderClassificationStage:
     def audit_emitter(self, emitter: AuditEmitter) -> None:
         self._audit_emitter = emitter
 
+    async def _emit_failure_event(
+        self, ctx: StageContext, error_type: str, error_message: str
+    ) -> None:
+        """Emit a failure audit event."""
+        if not self._audit_emitter:
+            return
+
+        email_hash = ctx.inputs.get("email_hash", "ERROR_NO_EMAIL_HASH")
+
+        await self._audit_emitter.emit(
+            correlation_id=ctx.snapshot.request_id,
+            email_hash=email_hash,
+            event_type="CLASSIFICATION_FAILED",
+            stage=self.name,
+            status="failed",
+            payload={
+                "error_type": error_type,
+                "error_message": error_message[:500],
+            },
+            model_name=self._model_name,
+            model_version=self._model_version,
+        )
+
     def _classify_by_keywords(self, subject: str, body: str) -> Classification:
         """Classify email based on keyword matching.
 
@@ -319,6 +342,7 @@ class PlaceholderClassificationStage:
 
         except Exception as e:
             logger.exception("Error in classification stage")
+            await self._emit_failure_event(ctx, type(e).__name__, str(e))
             return StageOutput.fail(
                 error=f"Classification error: {e}",
                 data={"stage": self.name, "error_type": type(e).__name__},
