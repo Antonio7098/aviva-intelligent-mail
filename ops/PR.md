@@ -135,25 +135,14 @@ gh pr checks
 gh run watch
 ```
 
-### 2. Address Feedback
+### 2. Address CI Failures
 
-- Make requested changes
-- Push updates
-- Respond to comments
+If CI fails:
 
-### 3. Merge PR
-
-When all checks pass and approved:
-
-```bash
-# Squash merge (recommended)
-gh pr merge --squash --delete-branch
-
-# Or via GitHub UI
-# - Set merge method to "Squash and merge"
-# - Click "Squash and merge"
-# - Confirm deletion of branch
-```
+1. Check error logs in GitHub Actions
+2. Fix issues locally
+3. Push updates
+4. Wait for CI to rerun
 
 ---
 
@@ -170,16 +159,7 @@ All must pass before merging.
 
 ---
 
-## Troubleshooting
-
-### CI Failed
-
-1. Check error logs in GitHub Actions
-2. Fix issues locally
-3. Push updates
-4. Wait for CI to rerun
-
-### Merge Conflicts
+## Merge Conflicts
 
 ```bash
 git fetch origin

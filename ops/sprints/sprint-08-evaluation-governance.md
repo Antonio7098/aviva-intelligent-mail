@@ -2,6 +2,8 @@
 
 > **Project:** Aviva Intelligent Mail - Privacy-first GenAI email triage for insurance operations
 
+> **Branch:** Start with `git checkout -b sprint/sprint-08-evaluation-governance`
+
 ---
 
 ## 📅 Sprint Overview
