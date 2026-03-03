@@ -7,6 +7,7 @@ with LLM integration in Sprint 5.
 import logging
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
 from stageflow import StageContext, StageKind, StageOutput
 
@@ -133,7 +134,7 @@ class PlaceholderClassificationStage:
         email_hash = ctx.inputs.get("email_hash", "ERROR_NO_EMAIL_HASH")
 
         await self._audit_emitter.emit(
-            correlation_id=ctx.snapshot.request_id,
+            correlation_id=ctx.snapshot.request_id or uuid4(),
             email_hash=email_hash,
             event_type="CLASSIFICATION_FAILED",
             stage=self.name,
@@ -296,7 +297,7 @@ class PlaceholderClassificationStage:
                 processed_at=datetime.utcnow(),
             )
 
-            correlation_id = ctx.snapshot.request_id
+            correlation_id = ctx.snapshot.request_id or uuid4()
 
             if self._audit_emitter:
                 await self._audit_emitter.emit(

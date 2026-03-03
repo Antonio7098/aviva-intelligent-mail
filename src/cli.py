@@ -134,7 +134,7 @@ async def process_email_batch(
                 metadata={"run_id": run_id},
             )
 
-            results = await graph.run(pipeline_ctx)
+            results = await graph.run(pipeline_ctx)  # type: ignore[attr-defined]
 
             ingestion_result = results.get("email_ingestion")
             if ingestion_result and ingestion_result.status == stageflow.StageStatus.OK:

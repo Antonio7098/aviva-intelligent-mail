@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
+from uuid import uuid4
 
 from pydantic import ValidationError
 
@@ -62,7 +63,7 @@ class EmailIngestionStage:
         if not self._audit_emitter:
             return
 
-        correlation_id = ctx.snapshot.request_id
+        correlation_id = ctx.snapshot.request_id or uuid4()
         batch_correlation_id = ctx.snapshot.pipeline_run_id
 
         payload: dict[str, Any] = {
@@ -156,7 +157,7 @@ class EmailIngestionStage:
 
             email_hash = self._generate_email_hash(email)
 
-            correlation_id = ctx.snapshot.request_id
+            correlation_id = ctx.snapshot.request_id or uuid4()
             batch_correlation_id = ctx.snapshot.pipeline_run_id
 
             if self._audit_emitter:
