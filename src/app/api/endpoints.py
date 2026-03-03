@@ -17,7 +17,6 @@ from src.domain.triage import (
     Priority,
 )
 from src.pipeline.stages.audit_emitter import AuditEmitter
-from src.pipeline.stages.priority import PriorityPolicyStage
 from src.policy.default_policy import DefaultPriorityPolicy
 from src.policy.priority import PriorityPolicy
 from src.privacy.event_sanitizer import EventSanitizer

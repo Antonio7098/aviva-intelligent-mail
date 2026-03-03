@@ -1,7 +1,7 @@
 import re
 
 from src.domain.triage import Priority, RiskTag
-from src.policy.priority import PriorityPolicy, RULESET_VERSION
+from src.policy.priority import RULESET_VERSION
 
 
 class DefaultPriorityPolicy:

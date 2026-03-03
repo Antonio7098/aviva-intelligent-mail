@@ -6,7 +6,7 @@ with priority ordering and actionable items.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from stageflow import StageKind, StageOutput
@@ -18,7 +18,7 @@ from src.domain.digest import (
     PriorityBreakdown,
     TopPriorityEmail,
 )
-from src.domain.triage import ActionType, Classification, Priority
+from src.domain.triage import Classification, Priority
 from src.pipeline.stages.audit_emitter import AuditEmitter
 
 logger = logging.getLogger(__name__)
