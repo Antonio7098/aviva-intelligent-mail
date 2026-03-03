@@ -12,7 +12,6 @@ import os
 from typing import Any
 
 import chromadb
-from chromadb.config import Settings as ChromaSettings
 from openai import AsyncOpenAI
 
 from src.app.config import settings
@@ -35,7 +34,7 @@ class OpenRouterEmbeddingClient:
     """
 
     DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
-    DEFAULT_MODEL = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
+    DEFAULT_MODEL = "BAAI/bge-large-en-v1.5"
 
     def __init__(
         self,
@@ -47,6 +46,12 @@ class OpenRouterEmbeddingClient:
         self._model = model or settings.embedding_model or self.DEFAULT_MODEL
         self._base_url = base_url or self.DEFAULT_BASE_URL
         self._api_key = api_key or os.getenv("OPENROUTER_API_KEY", "")
+
+        if not self._api_key:
+            logger.warning(
+                "OPENROUTER_API_KEY is not set - embedding operations will fail"
+            )
+
         self._client = AsyncOpenAI(
             base_url=self._base_url,
             api_key=self._api_key,
@@ -95,6 +100,9 @@ class ChromaVectorStore:
         results = await store.search(query_embedding, top_k=5)
     """
 
+    _client = None
+    _persist_directory = "/tmp/chroma_data"
+
     def __init__(
         self,
         chroma_url: str = "",
@@ -108,22 +116,26 @@ class ChromaVectorStore:
             collection_name: Name of the collection to use
             embedding_client: Optional embedding client (creates default if not provided)
         """
+        os.environ["CHROMA_TELEMETRY"] = "False"
         self._chroma_url = chroma_url or settings.chroma_url
         self._collection_name = collection_name
         self._embedding_client = embedding_client or OpenRouterEmbeddingClient()
 
         try:
-            self._client = chromadb.HttpClient(
-                settings=ChromaSettings(
-                    anonymized_telemetry=False,
-                    allow_reset=True,
+            if ChromaVectorStore._client is None:
+                persist_dir = os.environ.get(
+                    "CHROMA_PERSIST_DIRECTORY", self._persist_directory
                 )
-            )
+                os.makedirs(persist_dir, exist_ok=True)
+                ChromaVectorStore._client = chromadb.PersistentClient(path=persist_dir)
+                logger.info(f"Using PersistentClient with directory: {persist_dir}")
         except Exception as e:
-            logger.error(f"Failed to connect to ChromaDB: {e}")
-            raise VectorStoreConnectionError(
-                f"Failed to connect to ChromaDB at {self._chroma_url}: {e}"
-            ) from e
+            logger.warning(
+                f"Failed to use PersistentClient, falling back to EphemeralClient: {e}"
+            )
+            ChromaVectorStore._client = chromadb.EphemeralClient()
+
+        self._client = ChromaVectorStore._client
 
     async def index_documents(
         self,

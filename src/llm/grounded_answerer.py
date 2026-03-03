@@ -88,6 +88,8 @@ class GroundedAnswerer:
                 "No context or citations provided",
                 extra={
                     "context_length": len(context),
+                    "context_preview": context[:200] if context else "empty",
+                    "citations": citations,
                     "citations_count": len(citations),
                 },
             )
@@ -131,6 +133,7 @@ class GroundedAnswerer:
                 "answer": answer_text,
                 "citations": validated_citations,
                 "model_name": self._llm_client.model_name,
+                "prompt_version": self._prompt_version,
             }
 
         except Exception as e:

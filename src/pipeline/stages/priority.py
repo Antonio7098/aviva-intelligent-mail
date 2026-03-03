@@ -95,12 +95,8 @@ class PriorityPolicyStage:
             ctx.try_emit_event("priority_policy.started", {"stage": self.name})
 
             classification_data = ctx.inputs.get_from(
-                "placeholder_classification", "classification"
+                "llm_classification", "classification"
             )
-            if not classification_data:
-                classification_data = ctx.inputs.get_from(
-                    "llm_classification", "classification"
-                )
 
             if not classification_data:
                 return StageOutput.fail(
@@ -109,13 +105,13 @@ class PriorityPolicyStage:
                 )
 
             email_hash = ctx.inputs.get_from(
-                "placeholder_classification", "email_hash", default="UNKNOWN"
+                "llm_classification", "email_hash", default="UNKNOWN"
             )
             priority_str = ctx.inputs.get_from(
-                "placeholder_classification", "priority", default="p4_low"
+                "llm_classification", "priority", default="p4_low"
             )
             risk_tags = ctx.inputs.get_from(
-                "placeholder_classification", "risk_tags", default=[]
+                "llm_classification", "risk_tags", default=[]
             )
 
             subject = (

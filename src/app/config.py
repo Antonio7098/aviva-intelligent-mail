@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     )
 
     embedding_model: str = Field(
-        default="nvidia/llama-nemotron-embed-vl-1b-v2:free",
-        description="Embedding model name (default: nvidia/llama-nemotron-embed-vl-1b-v2:free)",
+        default="google/gemini-embedding-001",
+        description="Embedding model name (default: google/gemini-embedding-001)",
     )
 
     llm_base_url: str = Field(

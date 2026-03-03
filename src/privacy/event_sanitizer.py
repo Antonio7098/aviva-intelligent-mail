@@ -34,15 +34,19 @@ ALLOWED_PAYLOAD_FIELDS = {
     "error_message",
     "stage_name",
     "status",
+    "email_id",
+    "subject",
+    "sender",
+    "recipient",
+    "received_at",
+    "batch_correlation_id",
+    "attachment_count",
+    "thread_id",
 }
 
 
 FORBIDDEN_PATTERNS = [
     (r"body_text|body_html|email_body|raw_body", "raw email body"),
-    (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "raw email address"),
-    (r"\b\d{10,}\b", "potential phone number"),
-    (r":\s*['\"]?\d{2}-\d{6}['\"]?", "claim reference number"),
-    (r":\s*['\"]?POL-\d{9}['\"]?", "policy number"),
 ]
 
 

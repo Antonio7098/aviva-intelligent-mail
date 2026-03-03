@@ -104,12 +104,14 @@ class IndexingStage:
         try:
             ctx.try_emit_event("indexing.started", {"stage": self.name})
 
-            triage_data = ctx.data.get("priority_policy_data", {})
-            action_data = ctx.data.get("action_extraction_data", {})
+            triage_data = ctx.inputs.get_from("priority_policy", "data", {})
+            action_data = self._get_action_data(ctx)
 
-            email_hash = triage_data.get("email_hash", "")
+            email_hash = triage_data.get("email_hash", "") if triage_data else ""
             if not email_hash:
-                email_hash = ctx.data.get("email_hash", f"no_hash_{uuid4()}")
+                email_hash = ctx.inputs.get_from(
+                    "email_ingestion", "email_hash", default=f"no_hash_{uuid4()}"
+                )
 
             correlation_id = getattr(ctx, "pipeline_run_id", uuid4())
 
@@ -189,7 +191,9 @@ class IndexingStage:
         except Exception as e:
             logger.exception("Error in indexing stage")
 
-            email_hash = ctx.data.get("email_hash", "unknown")
+            email_hash = ctx.inputs.get_from(
+                "email_ingestion", "email_hash", default="unknown"
+            )
             correlation_id = getattr(ctx, "pipeline_run_id", uuid4())
 
             await self._emit_audit_event(
@@ -218,23 +222,18 @@ class IndexingStage:
 
     def _build_redacted_summary(self, ctx) -> str:
         """Build a redacted summary from the stage context."""
-        triage_data = ctx.data.get("priority_policy_data", {})
+        triage_data = ctx.inputs.get_from("priority_policy", "data", default={})
 
-        classification = triage_data.get("classification", "general")
-        priority = triage_data.get(
-            "adjusted_priority", triage_data.get("priority", "p4_low")
+        classification = (
+            triage_data.get("classification", "general") if triage_data else "general"
         )
-        rationale = triage_data.get("rationale", "")
-        risk_tags = triage_data.get("all_risk_tags", [])
-
-        classification_result = ctx.data.get(
-            "placeholder_classification"
-        ) or ctx.data.get("llm_classification")
-        if classification_result and classification_result.get("data"):
-            classification = classification_result["data"].get(
-                "classification", classification
-            )
-            rationale = classification_result["data"].get("rationale", rationale)
+        priority = (
+            triage_data.get("adjusted_priority", triage_data.get("priority", "p4_low"))
+            if triage_data
+            else "p4_low"
+        )
+        rationale = triage_data.get("rationale", "") if triage_data else ""
+        risk_tags = triage_data.get("all_risk_tags", []) if triage_data else []
 
         summary_parts = [
             f"Classification: {classification}",
@@ -287,3 +286,13 @@ class IndexingStage:
                 tags.add(f"entity:{key}")
 
         return list(tags)
+
+    def _get_action_data(self, ctx) -> dict:
+        """Get action data from action_extraction stage if available."""
+        try:
+            action_data = ctx.inputs.get_from("action_extraction", "data", {})
+            if action_data:
+                return action_data
+        except Exception:
+            pass
+        return {}
