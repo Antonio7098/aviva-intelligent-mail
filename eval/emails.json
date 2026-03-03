@@ -1,0 +1,187 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-03-03T00:00:00Z",
+  "description": "Golden dataset for evaluation - redacted email samples",
+  "emails": [
+    {
+      "email_hash": "a1b2c3d4e5f6",
+      "thread_id": "thr_hom_fnol_iv51_04",
+      "subject": "FNOL: Storm damage to listed holiday cottage roof ([LOCATION]) - urgent make-safe required",
+      "body": "Dear Pinnacle,\n\nI own a holiday cottage near [LOCATION]. Last night's gale has ripped multiple slates from the roof of my listed property. There's water coming into the lounge and the plaster on the ceiling is bowing.\n\nThe property is currently vacant but my neighbour has placed buckets and sent me photos. Please register a home claim and arrange for a local emergency roofer to make safe and tarp it. As it's a listed building, I'd like a loss adjuster with heritage experience, and confirmation of any listed building requirements in the process.\n\nPolicy number: [POLICY_NO]\nContact: [PHONE]\n\nKind regards,\n[MEMBER_NAME]",
+      "sender_domain": "protonmail.com",
+      "has_attachments": true,
+      "attachment_count": 2
+    },
+    {
+      "email_hash": "b2c3d4e5f6a1",
+      "thread_id": "thr_mtr_fnol_ne6_05",
+      "subject": "FNOL: Van theft - Renault Trafic stolen in [LOCATION], tools inside (crime ref [REF])",
+      "body": "Hi Claims Team,\n\nMy [YEAR] [MAKE] [MODEL] (reg: [REG]) was stolen overnight from outside my house in [LOCATION]. The van had copper piping and battery tools worth around [CURRENCY]3,000 inside. I've reported it to Northumbria Police - crime ref: [REF].\n\nI have a tracker installed and it pinged near [LOCATION] around [TIME] but then went silent. I don't have a spare vehicle, so I need help with a hire van if my policy allows.\n\nPolicy no: [POLICY_NO]\nContact: [PHONE]\n\nPlease open a theft claim and tell me what proof of ownership and tools inventory you need. Happy to send receipts. Also, let me know about any limits on tools left in the van overnight.\n\nRegards,\n[NAME]",
+      "sender_domain": "sky.com",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "c3d4e5f6a1b2",
+      "thread_id": "thr_hom_533661_ab10_17",
+      "subject": "[CLAIM_REF] - Claim form, tenancy agreement and EOW photos ([LOCATION])",
+      "body": "Dear Claims,\n\nWe're submitting the completed claim form, tenancy agreement, and photos for an escape of water affecting a rented flat in [LOCATION] under policyholder [NAME]. Claim reference: [CLAIM_REF].\n\nPlease confirm cover and excess and advise next steps for initial assessment.\n\nRegards,\n[BROKER_NAME] Brokers Claims",
+      "sender_domain": "bridgegatebrokers.co.uk",
+      "has_attachments": true,
+      "attachment_count": 3
+    },
+    {
+      "email_hash": "d4e5f6a1b2c3",
+      "thread_id": "thr_hom_483912_m20_06",
+      "subject": "[CLAIM_REF] - Adjuster appointment update",
+      "body": "Dear [NAME],\n\nThank you for your update last week on [CLAIM_REF] (burglary at your property in [LOCATION]). We've noted the new locks fitted. We are awaiting confirmation from the adjuster on appointment availability and will revert with a date.\n\nKind regards,\n[HANDLER_NAME]\nHome Claims Handler\nPinnacle Insurance",
+      "sender_domain": "pinnacle-insurance.co.uk",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "e5f6a1b2c3d4",
+      "thread_id": "thr_gen_malicious_cf24_30",
+      "subject": "Policy query - Malicious damage by tenants (buy-to-let, [LOCATION])",
+      "body": "Hello Pinnacle,\n\nI'm a landlord in [LOCATION]. Can you confirm whether malicious damage by tenants is covered under my buy-to-let policy and what evidence you'd need? We are planning an eviction and want to be clear on requirements should we need to claim.\n\nThanks,\n[NAME]",
+      "sender_domain": "btinternet.com",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "f6a1b2c3d4e5",
+      "thread_id": "thr_gen_yo1_sash_28",
+      "subject": "Policy query - Storm damage to original sash windows ([LOCATION])",
+      "body": "Dear Pinnacle,\n\nI own a Grade II listed townhouse in [LOCATION]. We've had storm damage to original sash windows and I'd like to understand if our policy covers repair or replacement of historic features, and whether you have approved heritage glaziers.\n\nPolicy no: [POLICY_NO]\n\nPlease advise on cover, matching items considerations, and any contractors you recommend.\n\nKind regards,\n[NAME]\n[COMPANY_NAME]",
+      "sender_domain": "marstonandco.co.uk",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "a1b2c3d4e5f6g",
+      "thread_id": "thr_mtr_560442_l13_20",
+      "subject": "Complaint - Courtesy van not provided ([CLAIM_REF])",
+      "body": "Dear Pinnacle,\n\nFive days after you told me a courtesy van would be sorted for [CLAIM_REF], nothing has materialised. I've had multiple missed call-backs and I'm losing income each day without the van.\n\nPlease escalate and arrange a hire vehicle today. I expect some goodwill given the inconvenience.\n\nRegards,\n[NAME]\n[LOCATION]\nTel: [PHONE]",
+      "sender_domain": "outlook.com",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "b2c3d4e5f6g1",
+      "thread_id": "thr_lia_752388_databreach_23",
+      "subject": "Data protection breach - [CLAIM_REF] (mis-sent documents)",
+      "body": "Dear Sirs,\n\nWe write to allege a data protection breach in relation to [CLAIM_REF]. Documents were emailed to the wrong party. Please provide details of the incident and confirm escalation to your Data Protection Officer. Our client reserves all rights.\n\nWe ask that you secure any mis-sent data immediately and provide confirmation of steps taken.\n\nYours faithfully,\n[NAME]\n[COMPANY_NAME]",
+      "sender_domain": "taylorandsonssolicitors.co.uk",
+      "has_attachments": true,
+      "attachment_count": 1
+    },
+    {
+      "email_hash": "c3d4e5f6g1h2",
+      "thread_id": "thr_info_cs_feedback_41",
+      "subject": "Positive feedback - [CLAIM_REF]",
+      "body": "Passing along positive feedback from [NAME] on handling of [CLAIM_REF]--he praised clear updates and empathy. Great work.\n\nCustomer Services",
+      "sender_domain": "pinnacle-insurance.co.uk",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "d4e5f6g1h2i3",
+      "thread_id": "thr_irr_courier_dpd_49",
+      "subject": "Delivery notification - Parcel requires signature",
+      "body": "Your parcel will be delivered today and requires a signature at head office. Track your parcel using the link below.\n\nDPD",
+      "sender_domain": "dpd.co.uk",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "e5f6g1h2i3j4",
+      "thread_id": "thr_irr_misroute_cv_48",
+      "subject": "Application - Marketing Executive (CV attached)",
+      "body": "Dear HR Team,\n\nPlease find my CV attached for the Marketing Executive role. Apologies if this is the wrong mailbox.\n\nRegards,\n[NAME]",
+      "sender_domain": "gmail.com",
+      "has_attachments": true,
+      "attachment_count": 1
+    },
+    {
+      "email_hash": "f6g1h2i3j4k5",
+      "thread_id": "thr_info_finance_runs_42",
+      "subject": "Finance notice - Supplier payment runs moving to Tuesdays",
+      "body": "Finance update: Supplier payment runs will shift from Wednesdays to Tuesdays from next month. Cut-off times have been updated in the attached notice.\n\nFinance Team",
+      "sender_domain": "pinnacle-insurance.co.uk",
+      "has_attachments": true,
+      "attachment_count": 1
+    },
+    {
+      "email_hash": "g1h2i3j4k5l6",
+      "thread_id": "thr_info_fraud_alerts_43",
+      "subject": "Fraud alert - High-risk repairers/hire firms (extra checks required)",
+      "body": "FYI list attached: high-risk repairers and hire firms flagged in recent investigations. Please conduct extra checks when instructing.\n\nFraud Team",
+      "sender_domain": "pinnacle-insurance.co.uk",
+      "has_attachments": true,
+      "attachment_count": 1
+    },
+    {
+      "email_hash": "h2i3j4k5l6m7",
+      "thread_id": "thr_info_compliance_pi_39",
+      "subject": "Compliance overview - Updated PI pre-action protocols (Scotland)",
+      "body": "Please see the overview of updated pre-action protocols for personal injury in Scotland, with links to guidance and a summary of changes.\n\nRegards,\nCompliance",
+      "sender_domain": "pinnacle-insurance.co.uk",
+      "has_attachments": true,
+      "attachment_count": 1
+    },
+    {
+      "email_hash": "i3j4k5l6m7n8",
+      "thread_id": "thr_gen_scooter_iv2_32",
+      "subject": "Policy query - Mobility scooter stolen from locked shed ([LOCATION])",
+      "body": "Hello,\n\nWould theft of a mobility scooter from a locked garden shed be covered under my home policy? Do I need proof of purchase? I'm in [LOCATION].\n\nRegards,\n[NAME]",
+      "sender_domain": "protonmail.com",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "j4k5l6m7n8o9",
+      "thread_id": "thr_gen_pl_ne1_31",
+      "subject": "Public liability limit and notification requirements - [EVENT] ([LOCATION])",
+      "body": "Hi,\n\nI'm an event florist in [LOCATION]. Please confirm my public liability limit and any notification requirements for a large wedding at the [VENUE] next month. Are temporary staff covered under my policy?\n\nPolicy no: [POLICY_NO]\n\nThanks,\n[NAME]\n[COMPANY_NAME]",
+      "sender_domain": "blossomandbloom.co.uk",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "k5l6m7n8o9p0",
+      "thread_id": "thr_lia_fnol_cf10_03",
+      "subject": "[LOCATION] café slip-and-fall incident - request to open PL claim",
+      "body": "Dear Claims Team,\n\nWe had a slip-and-fall incident outside our café this morning in [LOCATION]. Rainwater pooled just inside the entrance and a customer fell. Staff completed an incident report and we have CCTV that shows the area and the fall.\n\nWe've assisted the customer and logged the incident. Please open a public liability claim and advise what you need from us (CCTV, incident report, witness statements). Our café details are below.\n\nCafe Name: [CAFE_NAME], [LOCATION]\nContact: [PHONE]\n\nRegards,\n[NAME]\nManager",
+      "sender_domain": "hayesstreetcafe.co.uk",
+      "has_attachments": true,
+      "attachment_count": 1
+    },
+    {
+      "email_hash": "l6m7n8o9p0q1",
+      "thread_id": "thr_mtr_552301_sheffield_08",
+      "subject": "[CLAIM_REF] - Parts authority required ([MAKE] [MODEL] rear bumper & sensors)",
+      "body": "Morning,\n\nWe're chasing parts authority for [CLAIM_REF] ([YEAR] [MAKE] [MODEL] - rear bumper, sensors and loom). We submitted the OEM parts list and labour hours last week and the customer is on our back about completion timing. Please confirm if we can order today.\n\nAttached: Estimate and parts breakdown (OEM).\n\nThanks,\n[BODYSHOPS_NAME] Service Team",
+      "sender_domain": "steelcity-bodyshop.co.uk",
+      "has_attachments": true,
+      "attachment_count": 2
+    },
+    {
+      "email_hash": "m7n8o9p0q1r2",
+      "thread_id": "thr_lia_771045_eh6_07",
+      "subject": "[CLAIM_REF] - Status of indemnity position and timetable",
+      "body": "Dear Pinnacle Claims,\n\nWe served our client's orthopaedic report under [CLAIM_REF] ten days ago and have not yet received your indemnity position or an indication of your timetable for response and any offer. The incident involved a trip on uneven paving outside the insured's premises in [LOCATION].\n\nPlease confirm receipt of the report and advise next steps.\n\nRegards,\n[NAME]\n[COMPANY_NAME]\n[PHONE]",
+      "sender_domain": "caledonialaw.co.uk",
+      "has_attachments": false,
+      "attachment_count": 0
+    },
+    {
+      "email_hash": "n8o9p0q1r2s3",
+      "thread_id": "thr_hom_520119_g3_14",
+      "subject": "[CLAIM_REF] - Stolen e-bike documents (photos, receipt, serial, CCTV)",
+      "body": "Hi,\n\nSubmitting documents for [CLAIM_REF] (stolen e-bike, [LOCATION]). I've attached photos, the purchase receipt, and the serial number sticker image. Our concierge shared CCTV stills as well.\n\nPlease confirm what else you need and whether theft from a communal hallway is covered under my policy conditions. I can provide the police crime reference if you don't already have it.\n\nThanks,\n[NAME]\n[LOCATION]",
+      "sender_domain": "gmail.com",
+      "has_attachments": true,
+      "attachment_count": 4
+    }
+  ]
+}
