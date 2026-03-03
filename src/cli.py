@@ -265,9 +265,9 @@ def run(
         help="Path to save evaluation results JSON",
     ),
     use_llm: bool = typer.Option(
-        False,
-        "--use-llm",
-        help="Use actual LLM pipeline (requires LLM client configuration)",
+        True,
+        "--use-llm/--no-use-llm",
+        help="Use actual LLM pipeline (default: True, use --no-use-llm for placeholder)",
     ),
 ) -> None:
     """Run evaluation on golden dataset.
@@ -289,7 +289,29 @@ def run(
 
         labels_dict = label_dataset.to_dict()
 
-        evaluator = PipelineEvaluator(use_llm=use_llm)
+        llm_client = None
+        if use_llm:
+            try:
+                import os
+                from src.llm.openai_client import OpenAIClient
+
+                api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    typer.echo(
+                        "Warning: No API key found (OPENROUTER_API_KEY or OPENAI_API_KEY)",
+                        err=True,
+                    )
+                    typer.echo("Falling back to placeholder classifier")
+                    use_llm = False
+                else:
+                    llm_client = OpenAIClient(api_key=api_key)
+                    typer.echo(f"Using LLM: {llm_client.model_name}")
+            except Exception as e:
+                typer.echo(f"Warning: Could not create LLM client: {e}", err=True)
+                typer.echo("Falling back to placeholder classifier")
+                use_llm = False
+
+        evaluator = PipelineEvaluator(llm_client=llm_client, use_llm=use_llm)
 
         typer.echo(f"Running evaluation on {len(dataset.emails)} emails...")
         results = evaluator.run_evaluation(dataset.to_dict_list())

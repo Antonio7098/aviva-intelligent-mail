@@ -23,15 +23,16 @@ class PipelineEvaluator(BaseEvalRunner):
         llm_client: Optional[Any] = None,
         vector_store: Optional[Any] = None,
         database: Optional[Any] = None,
-        use_llm: bool = False,
+        use_llm: bool = True,
     ):
         """Initialize the pipeline evaluator.
 
         Args:
-            llm_client: LLM client for classification (optional for testing).
+            llm_client: LLM client for classification (required for LLM mode).
             vector_store: Vector store for retrieval (optional).
             database: Database for persistence (optional).
-            use_llm: If True, use actual LLM pipeline when client is provided.
+            use_llm: If True (default), use actual LLM pipeline when client is provided.
+                     Falls back to placeholder if no client provided.
         """
         self._llm_client = llm_client
         self._vector_store = vector_store
