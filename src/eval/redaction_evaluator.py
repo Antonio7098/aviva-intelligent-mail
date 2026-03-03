@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -155,8 +157,6 @@ class PIIRedactionEvaluator:
         Returns:
             List of detected PII instances.
         """
-        import re
-
         detected = []
 
         email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
@@ -233,7 +233,6 @@ class PIIRedactionEvaluator:
         Returns:
             Redacted text.
         """
-        import re
 
         redacted = text
 
@@ -252,7 +251,12 @@ class PIIRedactionEvaluator:
 
         for pattern in patterns:
             if len(pattern) == 3:
-                redacted = re.sub(pattern[0], pattern[1], redacted, flags=pattern[2])
+                redacted = re.sub(
+                    pattern[0],
+                    pattern[1],
+                    redacted,
+                    flags=pattern[2],  # type: ignore[arg-type]
+                )
             else:
                 redacted = re.sub(pattern[0], pattern[1], redacted)
 
@@ -333,8 +337,6 @@ class PIIRedactionEvaluator:
             result.redaction_completeness = 1.0
             return
 
-        import re
-
         remaining_pii = 0
 
         for pii_type in self.PII_TYPES:
@@ -368,8 +370,6 @@ class PIIRedactionEvaluator:
         self, result: PIIRedactionResult, redacted_text: str
     ) -> None:
         """Check that placeholders are used consistently."""
-
-        import re
 
         placeholder_counts: dict[str, int] = {}
 

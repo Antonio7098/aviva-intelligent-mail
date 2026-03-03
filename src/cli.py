@@ -6,20 +6,16 @@ This module provides the command-line interface for processing email batches.
 import asyncio
 import json
 import logging
-import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 from uuid import UUID, uuid4
 
+import typer
 from dotenv import load_dotenv
 from pathlib import Path as PathLib
 
-import typer
-
 import stageflow
-
-load_dotenv(PathLib(__file__).parent.parent / ".env")
 
 from src.audit.postgres_sink import PostgresAuditSink
 from src.eval import (
@@ -35,6 +31,8 @@ from src.pipeline.graph import create_email_pipeline
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.privacy.event_sanitizer import EventSanitizer
 from src.store.postgres_db import PostgresDatabase
+
+load_dotenv(PathLib(__file__).parent.parent / ".env")
 
 logging.basicConfig(
     level=logging.INFO,
