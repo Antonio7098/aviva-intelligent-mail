@@ -4,18 +4,24 @@ This module creates the Stageflow pipeline with all stages wired together.
 """
 
 import logging
+import os
 from typing import Optional
 
 from stageflow import Pipeline, StageKind
+from stageflow.pipeline.interceptors import get_default_interceptors
+from stageflow.pipeline.dag import StageGraph
 
 from src.pipeline.stages.audit_emitter import AuditEmitter
-from src.pipeline.stages.classification import PlaceholderClassificationStage
+from src.pipeline.stages.classification import LLMClassificationStage
+from src.pipeline.stages.extract_actions import ActionExtractionStage
 from src.pipeline.stages.ingestion import EmailIngestionStage
 from src.pipeline.stages.persistence import ReadModelWriterStage
 from src.pipeline.stages.redaction import MinimisationRedactionStage
 from src.privacy.redactor import PIIRedactor
 from src.privacy.presidio_redactor import PresidioRedactor
 from src.store.database import Database
+from src.llm.openai_client import create_openai_client
+from src.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -24,19 +30,33 @@ def create_email_pipeline(
     database: Optional[Database] = None,
     audit_emitter: Optional[AuditEmitter] = None,
     pii_redactor: Optional[PIIRedactor] = None,
-) -> Pipeline:
+    llm_client: Optional[LLMClient] = None,
+    use_llm: bool = True,
+) -> StageGraph:
     """Create the email processing pipeline.
 
     DAG:
-        [ingestion] → [redaction] → [classification] → [persistence]
+        [ingestion] → [redaction] → [classification] → [action_extraction] → [persistence]
+
+    The pipeline uses stageflow's built-in interceptors:
+    - CircuitBreakerInterceptor: Prevents cascading failures
+    - TimeoutInterceptor: Enforces per-stage timeouts
+    - RetryInterceptor: Automatic retry with backoff (per-stage config)
+
+    LLM Stages use:
+    - Instructor for structured output validation with auto-retries
+    - ctx.emit_event() for observability
+    - retry_config for stageflow retry interceptor
 
     Args:
         database: Database interface for persistence stage
         audit_emitter: Optional audit emitter for all stages
         pii_redactor: Optional PII redaction implementation
+        llm_client: Optional LLM client (created from env if not provided)
+        use_llm: Whether to use LLM classification (vs placeholder)
 
     Returns:
-        Configured Stageflow Pipeline
+        Configured Stageflow StageGraph with interceptors
     """
     ingestion_stage = EmailIngestionStage(audit_emitter=audit_emitter)
 
@@ -45,35 +65,102 @@ def create_email_pipeline(
         audit_emitter=audit_emitter,
     )
 
-    classification_stage = PlaceholderClassificationStage(audit_emitter=audit_emitter)
+    if use_llm:
+        classification_stage = LLMClassificationStage(
+            llm_client=llm_client  # type: ignore[arg-type]
+            or create_openai_client(
+                api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            )
+        )
+        action_stage = ActionExtractionStage(
+            llm_client=llm_client  # type: ignore[arg-type]
+            or create_openai_client(
+                api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            )
+        )
+    else:
+        from src.pipeline.stages.placeholder_classification import (
+            PlaceholderClassificationStage,
+        )
+
+        classification_stage = PlaceholderClassificationStage(  # type: ignore[assignment]
+            audit_emitter=audit_emitter
+        )
+        action_stage = None
 
     persistence_stage = ReadModelWriterStage(
         database=database, audit_emitter=audit_emitter
     )
 
-    pipeline = (
-        Pipeline()
-        .with_stage("email_ingestion", ingestion_stage, StageKind.TRANSFORM)
-        .with_stage(
-            "minimisation_redaction",
-            redaction_stage,
-            StageKind.TRANSFORM,
-            dependencies=("email_ingestion",),
+    if use_llm and action_stage:
+        pipeline = (
+            Pipeline()
+            .with_stage("email_ingestion", ingestion_stage, StageKind.TRANSFORM)
+            .with_stage(
+                "minimisation_redaction",
+                redaction_stage,
+                StageKind.TRANSFORM,
+                dependencies=("email_ingestion",),
+            )
+            .with_stage(
+                "llm_classification",
+                classification_stage,
+                StageKind.ENRICH,
+                dependencies=("minimisation_redaction",),
+            )
+            .with_stage(
+                "action_extraction",
+                action_stage,
+                StageKind.ENRICH,
+                dependencies=("llm_classification",),
+            )
+            .with_stage(
+                "read_model_writer",
+                persistence_stage,
+                StageKind.WORK,
+                dependencies=("action_extraction",),
+            )
         )
-        .with_stage(
-            "placeholder_classification",
-            classification_stage,
-            StageKind.TRANSFORM,
-            dependencies=("minimisation_redaction",),
+        stage_count = 5
+    else:
+        pipeline = (
+            Pipeline()
+            .with_stage("email_ingestion", ingestion_stage, StageKind.TRANSFORM)
+            .with_stage(
+                "minimisation_redaction",
+                redaction_stage,
+                StageKind.TRANSFORM,
+                dependencies=("email_ingestion",),
+            )
+            .with_stage(
+                "placeholder_classification",
+                classification_stage,
+                StageKind.TRANSFORM,
+                dependencies=("minimisation_redaction",),
+            )
+            .with_stage(
+                "read_model_writer",
+                persistence_stage,
+                StageKind.WORK,
+                dependencies=("placeholder_classification",),
+            )
         )
-        .with_stage(
-            "read_model_writer",
-            persistence_stage,
-            StageKind.WORK,
-            dependencies=("placeholder_classification",),
-        )
+        stage_count = 4
+
+    interceptors = get_default_interceptors()
+
+    graph = StageGraph(
+        specs=pipeline.build().stage_specs,  # type: ignore[arg-type]
+        interceptors=interceptors,
     )
 
-    logger.info("Email pipeline created", extra={"stages": 4})
+    logger.info(
+        "Email pipeline created",
+        extra={
+            "stages": stage_count,
+            "interceptors": len(interceptors),
+            "use_llm": use_llm,
+        },
+    )
 
-    return pipeline
+    return graph

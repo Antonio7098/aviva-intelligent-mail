@@ -19,7 +19,7 @@ Aviva Intelligent Mail (AIM) is an AI-powered solution that classifies, prioriti
 ## Technology Stack
 
 - **Application:** FastAPI, Stageflow, Pydantic
-- **LLM:** OpenAI SDK (OpenRouter for dev)
+- **LLM:** Instructor (OpenRouter for dev/prod), Pydantic validation
 - **Privacy:** Microsoft Presidio, custom recognisers
 - **Storage:** PostgreSQL (event store), ChromaDB (vectors)
 - **Observability:** Structured logging, OpenTelemetry
@@ -120,8 +120,9 @@ stageflow-docs/            # Stageflow framework docs
 
 1. **Ingestion** - Email validation and normalisation
 2. **Minimisation & Redaction** - Thread trimming, signature removal, PII redaction
-3. **Classification** - Rule-based email classification (placeholder for LLM)
-4. **Persistence** - Privacy-gated write to event store
+3. **LLM Classification** - LLM-based classification with Instructor validation
+4. **Action Extraction** - Extract required actions from emails
+5. **Persistence** - Privacy-gated write to event store
 
 ## Security
 

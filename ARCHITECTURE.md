@@ -57,10 +57,9 @@ Vector Index (Redacted Summaries Only)
 - Pydantic (strict domain modelling + validation)
 
 ## LLM Layer
-- OpenAI SDK (production)
-- OpenRouter (local testing / dev switching)
-- Inspector (LLM output validation)
-- Perspective (input filtering)
+- OpenRouter (production/dev)
+- Instructor (structured outputs with Pydantic validation + auto-retries)
+- Prompt versioning for reproducibility
 
 ## Privacy Layer
 - Microsoft Presidio (PII detection + redaction)
@@ -166,7 +165,8 @@ LLM outputs structured JSON:
 - rationale
 
 Validation:
-- Inspector + Pydantic schema enforcement
+- Instructor + Pydantic schema enforcement
+- Automatic retry on validation failure
 - Deterministic temperature
 - Strict JSON-only response
 

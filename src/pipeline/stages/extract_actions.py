@@ -1,30 +1,31 @@
-"""LLM-based classification stage for the pipeline.
+"""Action extraction stage for the pipeline.
 
-This stage replaces the placeholder classification with LLM-based
-classification using the LLMClient interface. It provides:
-- LLM-powered email classification via Instructor (auto-retries on validation failure)
+This stage extracts required actions from emails using the LLM client.
+It provides:
+- LLM-powered action extraction via Instructor (auto-retries on validation failure)
 - Structured output validation via Pydantic schemas
 - Events for observability via ctx.try_emit_event()
 - Retry config for stageflow interceptor
 """
 
 import logging
+from datetime import datetime
 
 from stageflow import StageKind, StageOutput
 
 from src.domain.email import RedactedEmail
 from src.llm.client import LLMClient, LLMValidationError
-from src.llm.prompts import CURRENT_CLASSIFICATION_VERSION
-from src.llm.schemas import safe_validate_classification
+from src.llm.prompts import CURRENT_ACTION_EXTRACTION_VERSION
+from src.llm.schemas import safe_validate_action_extraction
 
 logger = logging.getLogger(__name__)
 
 
-class LLMClassificationStage:
-    """Stage 2: LLM-based email classification.
+class ActionExtractionStage:
+    """Stage 3: LLM-based action extraction.
 
-    This stage uses an LLM client to classify emails into categories
-    with confidence scores and priority levels.
+    This stage uses an LLM client to extract required actions from emails.
+    Actions include call backs, escalations, manual reviews, etc.
 
     Uses Instructor for:
     - Structured JSON output via Pydantic models
@@ -40,7 +41,7 @@ class LLMClassificationStage:
         enabling easy testing and configuration.
     """
 
-    name = "llm_classification"
+    name = "action_extraction"
     kind = StageKind.ENRICH
 
     retry_config = {
@@ -52,12 +53,12 @@ class LLMClassificationStage:
     def __init__(
         self,
         llm_client: "LLMClient" = None,  # type: ignore[assignment]
-        prompt_version: str = CURRENT_CLASSIFICATION_VERSION,
+        prompt_version: str = CURRENT_ACTION_EXTRACTION_VERSION,
     ):
-        """Initialize the LLM classification stage.
+        """Initialize the action extraction stage.
 
         Args:
-            llm_client: LLM client for classification (required)
+            llm_client: LLM client for action extraction (required)
             prompt_version: Version of prompt template to use
         """
         if llm_client is None:
@@ -67,18 +68,17 @@ class LLMClassificationStage:
 
     def _create_redacted_email(self, ctx) -> RedactedEmail:
         """Create RedactedEmail from stage context."""
-        from datetime import timezone, datetime
-        from typing import Any
+        from datetime import timezone
 
-        redaction_data: dict[str, Any] = ctx.data.get("minimisation_redaction_data", {})
+        redaction_data = ctx.data.get("minimisation_redaction_data", {})
 
-        email_hash = str(redaction_data.get("email_hash", ""))
-        subject = str(redaction_data.get("subject", ""))
-        sender = str(redaction_data.get("sender", ""))
-        recipient = str(redaction_data.get("recipient", ""))
-        body_text = str(redaction_data.get("body_text", ""))
-        attachments = list(redaction_data.get("attachments", []))
-        pii_counts = dict(redaction_data.get("pii_counts", {}))
+        email_hash = redaction_data.get("email_hash")
+        subject = redaction_data.get("subject", "") or ""
+        sender = redaction_data.get("sender", "") or ""
+        recipient = redaction_data.get("recipient", "") or ""
+        body_text = redaction_data.get("body_text", "") or ""
+        attachments = redaction_data.get("attachments", []) or []
+        pii_counts = redaction_data.get("pii_counts", {}) or {}
         received_at_str = redaction_data.get("received_at")
         body_html = redaction_data.get("body_html")
         thread_id: str | None = redaction_data.get("thread_id")
@@ -106,30 +106,30 @@ class LLMClassificationStage:
         )
 
     async def execute(self, ctx) -> StageOutput:
-        """Execute the LLM classification stage.
+        """Execute the action extraction stage.
 
         Args:
-            ctx: Stage context with input data from redaction stage
+            ctx: Stage context with input data
 
         Returns:
-            StageOutput with classification results
+            StageOutput with extracted actions
         """
         try:
-            ctx.try_emit_event("llm_classification.started", {"stage": self.name})
+            ctx.try_emit_event("action_extraction.started", {"stage": self.name})
 
             email = self._create_redacted_email(ctx)
 
-            raw_result = await self._llm_client.classify(
+            raw_result = await self._llm_client.extract_actions(
                 email=email,
                 prompt_version=self._prompt_version,
             )
 
-            validation_result = safe_validate_classification(raw_result)
+            validation_result = safe_validate_action_extraction(raw_result)
 
             if not validation_result.is_valid:
                 error_msg = f"Validation failed: {validation_result.errors}"
                 ctx.try_emit_event(
-                    "llm_classification.validation_failed",
+                    "action_extraction.validation_failed",
                     {
                         "error": error_msg,
                         "email_hash": email.email_hash,
@@ -145,20 +145,29 @@ class LLMClassificationStage:
                 )
 
             from typing import Any
+            from src.domain.triage import ActionType, RequiredAction
 
             validated_data: dict[str, Any] = validation_result.data or {}
-            classification = str(validated_data.get("classification", "general"))
+            actions_data = list(validated_data.get("actions", []))
             confidence = float(validated_data.get("confidence", 0.5))
-            priority = str(validated_data.get("priority", "p4_low"))
-            rationale = str(validated_data.get("rationale", ""))
-            risk_tags = list(validated_data.get("risk_tags", []))
+
+            required_actions = []
+            for action_dict in actions_data:
+                action_type_str = action_dict.get("action_type", "manual_review")
+                required_actions.append(
+                    RequiredAction(
+                        action_type=ActionType(action_type_str),
+                        entity_refs=action_dict.get("entity_refs", {}),
+                        deadline=None,
+                        notes=action_dict.get("notes"),
+                    )
+                )
 
             ctx.try_emit_event(
-                "llm_classification.completed",
+                "action_extraction.completed",
                 {
                     "email_hash": email.email_hash,
-                    "classification": classification,
-                    "priority": priority,
+                    "actions_count": len(required_actions),
                     "confidence": confidence,
                     "model_name": self._llm_client.model_name,
                     "model_version": self._llm_client.model_version,
@@ -167,11 +176,10 @@ class LLMClassificationStage:
             )
 
             logger.info(
-                "Email classified via LLM",
+                "Actions extracted via LLM",
                 extra={
                     "email_hash": email.email_hash,
-                    "classification": classification,
-                    "priority": priority,
+                    "actions_count": len(required_actions),
                     "confidence": confidence,
                     "model": self._llm_client.model_name,
                     "prompt_version": self._prompt_version,
@@ -179,41 +187,50 @@ class LLMClassificationStage:
                 },
             )
 
-            ctx.data["llm_classification_data"] = {
+            ctx.data["action_extraction_data"] = {
                 "email_hash": email.email_hash,
-                "classification": classification,
+                "actions": [
+                    {
+                        "action_type": a.action_type.value,
+                        "entity_refs": a.entity_refs,
+                        "deadline": a.deadline.isoformat() if a.deadline else None,
+                        "notes": a.notes,
+                    }
+                    for a in required_actions
+                ],
                 "confidence": confidence,
-                "priority": priority,
-                "rationale": rationale,
-                "risk_tags": risk_tags,
                 "model_name": self._llm_client.model_name,
                 "model_version": self._llm_client.model_version,
             }
 
             return StageOutput.ok(
                 email_hash=email.email_hash,
-                classification=classification,
+                actions=[
+                    {
+                        "action_type": a.action_type.value,
+                        "entity_refs": a.entity_refs,
+                        "deadline": a.deadline.isoformat() if a.deadline else None,
+                        "notes": a.notes,
+                    }
+                    for a in required_actions
+                ],
                 confidence=confidence,
-                priority=priority,
-                rationale=rationale,
-                risk_tags=risk_tags,
-                required_actions=[],
                 model_name=self._llm_client.model_name,
                 model_version=self._llm_client.model_version,
                 prompt_version=self._prompt_version,
             )
 
         except LLMValidationError as e:
-            logger.error(f"Classification validation failed: {e}")
+            logger.error(f"Action extraction validation failed: {e}")
             ctx.try_emit_event(
-                "llm_classification.error",
+                "action_extraction.error",
                 {
                     "error_type": "validation_error",
                     "error": str(e),
                 },
             )
             return StageOutput.fail(
-                error=f"Classification validation failed: {e}",
+                error=f"Action extraction validation failed: {e}",
                 data={
                     "stage": self.name,
                     "error_type": "validation_error",
@@ -221,16 +238,16 @@ class LLMClassificationStage:
                 },
             )
         except Exception as e:
-            logger.exception("Error in LLM classification stage")
+            logger.exception("Error in action extraction stage")
             ctx.try_emit_event(
-                "llm_classification.error",
+                "action_extraction.error",
                 {
                     "error_type": type(e).__name__,
                     "error": str(e),
                 },
             )
             return StageOutput.fail(
-                error=f"Classification error: {e}",
+                error=f"Action extraction error: {e}",
                 data={
                     "stage": self.name,
                     "error_type": type(e).__name__,

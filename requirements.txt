@@ -31,3 +31,6 @@ pip-audit>=2.10.0
 # Privacy - PII Detection & Redaction
 presidio-analyzer>=2.1.0
 presidio-anonymizer>=2.1.0
+
+# LLM - Instructor for structured outputs (built on Pydantic, auto-retries)
+instructor>=0.6.0
