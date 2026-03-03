@@ -41,7 +41,10 @@ This directory contains business and operational documentation for Aviva Intelli
 - **Sprint Roadmap:** [../ops/ROADMAP.md](../ops/ROADMAP.md)
 - **Sprint Template:** [../ops/SPRINT_TEMPLATE.md](../ops/SPRINT_TEMPLATE.md)
 - **Code Review:** [../ops/core-review/](../ops/core-review/)
-- **API Documentation:** Run FastAPI and visit `/docs`
+### API Documentation
+
+- [API.md](API.md) - REST API endpoints, authentication, and usage
+- [API_MODELS.md](API_MODELS.md) - Domain models and data structures
 - **Privacy & Security:** [ARCHITECTURE.md#8-data-protection-architecture](../ARCHITECTURE.md#8-data-protection-architecture)
 - **Pipeline Design:** [ARCHITECTURE.md#5-pipeline-design-stageflow](../ARCHITECTURE.md#5-pipeline-design-stageflow)
 - **Technology Stack:** [ARCHITECTURE.md#3-technology-stack](../ARCHITECTURE.md#3-technology-stack)
