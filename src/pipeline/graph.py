@@ -3,12 +3,22 @@
 This module creates the Stageflow pipeline with all stages wired together.
 """
 
+import asyncio
 import logging
 import os
+import random
+from enum import Enum
 from typing import Optional
 
 from stageflow import Pipeline, StageKind
 from stageflow.pipeline.dag import UnifiedStageGraph
+from stageflow.stages.context import PipelineContext
+from stageflow.stages.result import StageResult
+from stageflow.pipeline.interceptors import (
+    BaseInterceptor,
+    ErrorAction,
+    get_default_interceptors,
+)
 
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.pipeline.stages.classification import LLMClassificationStage
@@ -26,6 +36,126 @@ from src.llm.client import LLMClient
 logger = logging.getLogger(__name__)
 
 
+class BackoffStrategy(Enum):
+    EXPONENTIAL = "exponential"
+    LINEAR = "linear"
+    CONSTANT = "constant"
+
+
+class JitterStrategy(Enum):
+    NONE = "none"
+    FULL = "full"
+    EQUAL = "equal"
+    DECORRELATED = "decorrelated"
+
+
+class RetryInterceptor(BaseInterceptor):
+    """Interceptor that automatically retries failed stages.
+
+    Configurable backoff and jitter strategies prevent thundering herd
+    and gracefully handle transient failures.
+    """
+
+    name = "retry"
+    priority = 15
+
+    def __init__(
+        self,
+        max_attempts: int = 3,
+        base_delay_ms: int = 1000,
+        max_delay_ms: int = 30000,
+        backoff_strategy: BackoffStrategy = BackoffStrategy.EXPONENTIAL,
+        jitter_strategy: JitterStrategy = JitterStrategy.FULL,
+        retryable_errors: tuple[type[Exception], ...] = (
+            TimeoutError,
+            ConnectionError,
+            OSError,
+        ),
+    ) -> None:
+        self.max_attempts = max_attempts
+        self.base_delay_ms = base_delay_ms
+        self.max_delay_ms = max_delay_ms
+        self.backoff_strategy = backoff_strategy
+        self.jitter_strategy = jitter_strategy
+        self.retryable_errors = retryable_errors
+        self._previous_delays: dict[str, int] = {}
+
+    async def before(self, stage_name: str, ctx: PipelineContext) -> None:
+        if "_retry.attempt" not in ctx.data:
+            ctx.data["_retry.attempt"] = 0
+            ctx.data["_retry.stage"] = stage_name
+
+    async def after(
+        self, stage_name: str, result: StageResult, ctx: PipelineContext
+    ) -> None:
+        if result.status != "failed":
+            ctx.data.pop("_retry.attempt", None)
+            ctx.data.pop("_retry.stage", None)
+            self._previous_delays.pop(stage_name, None)
+
+    async def on_error(
+        self, stage_name: str, error: Exception, ctx: PipelineContext
+    ) -> ErrorAction:
+        if not isinstance(error, self.retryable_errors):
+            return ErrorAction.FAIL
+
+        attempt = ctx.data.get("_retry.attempt", 0)
+
+        if attempt >= self.max_attempts - 1:
+            logger.warning(
+                f"Stage {stage_name} exhausted {self.max_attempts} attempts",
+                extra={
+                    "stage": stage_name,
+                    "attempts": attempt + 1,
+                    "error": str(error),
+                },
+            )
+            return ErrorAction.FAIL
+
+        delay_ms = self._calculate_delay(stage_name, attempt)
+
+        logger.info(
+            f"Retrying stage {stage_name} in {delay_ms}ms (attempt {attempt + 2}/{self.max_attempts})",
+            extra={
+                "stage": stage_name,
+                "attempt": attempt + 1,
+                "delay_ms": delay_ms,
+                "error": str(error),
+            },
+        )
+
+        await asyncio.sleep(delay_ms / 1000.0)
+
+        ctx.data["_retry.attempt"] = attempt + 1
+
+        return ErrorAction.RETRY
+
+    def _calculate_delay(self, stage_name: str, attempt: int) -> int:
+        if self.backoff_strategy == BackoffStrategy.EXPONENTIAL:
+            base_delay = self.base_delay_ms * (2**attempt)
+        elif self.backoff_strategy == BackoffStrategy.LINEAR:
+            base_delay = self.base_delay_ms * (attempt + 1)
+        else:
+            base_delay = self.base_delay_ms
+
+        base_delay = min(base_delay, self.max_delay_ms)
+
+        if self.jitter_strategy == JitterStrategy.NONE:
+            delay = base_delay
+        elif self.jitter_strategy == JitterStrategy.FULL:
+            delay = random.randint(0, base_delay)
+        elif self.jitter_strategy == JitterStrategy.EQUAL:
+            half = base_delay // 2
+            delay = half + random.randint(0, half)
+        else:
+            prev = self._previous_delays.get(stage_name, self.base_delay_ms)
+            delay = min(self.max_delay_ms, random.randint(self.base_delay_ms, prev * 3))
+
+        self._previous_delays[stage_name] = delay
+
+        return delay
+
+
 def create_email_pipeline(
     database: Optional[Database] = None,
     audit_emitter: Optional[AuditEmitter] = None,
@@ -38,15 +168,14 @@ def create_email_pipeline(
     DAG:
         [ingestion] → [redaction] → [classification] → [action_extraction] → [persistence]
 
-    The pipeline uses stageflow's built-in interceptors:
+    The pipeline uses stageflow's built-in interceptors (via get_default_interceptors):
     - CircuitBreakerInterceptor: Prevents cascading failures
     - TimeoutInterceptor: Enforces per-stage timeouts
-    - RetryInterceptor: Automatic retry with backoff (per-stage config)
+    - RetryInterceptor: Automatic retry with backoff (custom implementation)
 
     LLM Stages use:
     - Instructor for structured output validation with auto-retries
     - ctx.emit_event() for observability
-    - retry_config for stageflow retry interceptor
 
     Args:
         database: Database interface for persistence stage
@@ -56,7 +185,7 @@ def create_email_pipeline(
         use_llm: Whether to use LLM classification (vs placeholder)
 
     Returns:
-        Configured Stageflow StageGraph with interceptors
+        Configured Stageflow UnifiedStageGraph with interceptors
     """
     ingestion_stage = EmailIngestionStage(audit_emitter=audit_emitter)
 
@@ -170,8 +299,20 @@ def create_email_pipeline(
         )
         stage_count = 5
 
+    interceptors = get_default_interceptors()
+    interceptors.append(
+        RetryInterceptor(
+            max_attempts=3,
+            base_delay_ms=1000,
+            max_delay_ms=30000,
+            backoff_strategy=BackoffStrategy.EXPONENTIAL,
+            jitter_strategy=JitterStrategy.FULL,
+        )
+    )
+
     graph = UnifiedStageGraph(
         specs=pipeline.build().stage_specs,  # type: ignore[arg-type]
+        interceptors=interceptors,
     )
 
     logger.info(
