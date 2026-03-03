@@ -5,7 +5,6 @@ with LLM integration in Sprint 5.
 """
 
 import logging
-from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
@@ -16,7 +15,6 @@ from src.domain.triage import (
     Classification,
     Priority,
     RequiredAction,
-    TriageDecision,
 )
 from src.pipeline.stages.audit_emitter import AuditEmitter
 
@@ -251,30 +249,35 @@ class PlaceholderClassificationStage:
         """Execute the classification stage.
 
         Args:
-            ctx: Stage context with input data from ingestion stage
+            ctx: Stage context with input data from redaction stage
 
         Returns:
             StageOutput with triage decision
         """
         try:
-            email_data = ctx.inputs.get_from(
-                "email_ingestion", "email_hash", default=None
+            redacted_data = ctx.inputs.get_from(
+                "minimisation_redaction", "email_hash", default=None
             )
-            if not email_data:
+            if not redacted_data:
                 email_hash = ctx.inputs.get("email_hash")
                 subject = ctx.inputs.get("subject", "") or ""
                 body_text = ctx.inputs.get("body_text", "") or ""
             else:
-                email_hash = ctx.inputs.get_from("email_ingestion", "email_hash")
-                subject = ctx.inputs.get_from("email_ingestion", "subject", default="")
+                email_hash = ctx.inputs.get_from("minimisation_redaction", "email_hash")
+                subject = (
+                    ctx.inputs.get_from("minimisation_redaction", "subject", default="")
+                    or ""
+                )
                 body_text = (
-                    ctx.inputs.get_from("email_ingestion", "body_text", default="")
+                    ctx.inputs.get_from(
+                        "minimisation_redaction", "body_text", default=""
+                    )
                     or ""
                 )
 
             if not email_hash:
                 return StageOutput.fail(
-                    error="No email data from ingestion stage",
+                    error="No email data from redaction stage",
                     data={"stage": self.name},
                 )
 
@@ -282,20 +285,6 @@ class PlaceholderClassificationStage:
             priority = self._determine_priority(subject, body_text, classification)
             rationale = self._generate_rationale(classification, priority)
             required_actions = self._extract_actions(classification)
-
-            _decision = TriageDecision(
-                email_hash=email_hash,
-                classification=classification,
-                confidence=0.5,
-                priority=priority,
-                required_actions=required_actions,
-                risk_tags=[],
-                rationale=rationale,
-                model_name=self._model_name,
-                model_version=self._model_version,
-                prompt_version="N/A",
-                processed_at=datetime.utcnow(),
-            )
 
             correlation_id = ctx.snapshot.request_id or uuid4()
 

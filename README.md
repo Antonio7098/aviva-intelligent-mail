@@ -85,13 +85,20 @@ src/
 ├── pipeline/               # Stageflow pipeline stages
 │   ├── stages/             # Pipeline stage implementations
 │   │   ├── ingestion.py    # Email ingestion stage
+│   │   ├── redaction.py    # Privacy minimisation & PII redaction
 │   │   ├── classification.py # Placeholder classification stage
 │   │   ├── persistence.py  # Read model writer stage
 │   │   └── audit_emitter.py # Audit event emitter
 │   └── graph.py            # Pipeline DAG construction
 ├── domain/                 # Domain models (Pydantic)
-├── store/                 # Database and vector store
-├── privacy/               # PII redaction and sanitisation
+├── store/                  # Database and vector store
+├── privacy/                # PII redaction and sanitisation
+│   ├── redaction.py        # PIIRedactor protocol
+│   ├── presidio_redactor.py # Presidio implementation
+│   ├── preprocessing.py    # Email preprocessing
+│   ├── gate.py             # Privacy gate interceptor
+│   ├── sanitizer.py        # PrivacySanitizer protocol
+│   └── event_sanitizer.py  # Audit event sanitisation
 ├── audit/                 # Audit event handling
 ├── cli.py                 # CLI for batch processing
 tests/                     # Test suite
@@ -108,6 +115,13 @@ stageflow-docs/            # Stageflow framework docs
 - **Privacy by Design** - Redact before LLM, never persist raw content
 - **Audit Everything** - Append-only event store for all decisions
 - **SOLID Architecture** - Interfaces, DI, testable, swappable
+
+## Pipeline Stages
+
+1. **Ingestion** - Email validation and normalisation
+2. **Minimisation & Redaction** - Thread trimming, signature removal, PII redaction
+3. **Classification** - Rule-based email classification (placeholder for LLM)
+4. **Persistence** - Privacy-gated write to event store
 
 ## Security
 
