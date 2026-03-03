@@ -16,23 +16,22 @@ This directory contains business and operational documentation for Aviva Intelli
 ### Core Documentation
 
 - [../README.md](../README.md) - Project overview, PRD, requirements, objectives
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture, data flows, technology stack
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture, data flows, technology stack
+- [PRD.md](PRD.md) - Product requirements document
 - [../ops/ROADMAP.md](../ops/ROADMAP.md) - High-level sprint roadmap
 - [../ops/SPRINT_TEMPLATE.md](../ops/SPRINT_TEMPLATE.md) - Template for sprint planning and tracking
 
 ### Operational Documentation
 
 - [../ops/sprints/](../ops/sprints/) - Detailed sprint plans and tracking
-- [../ops/core-review/](../ops/core-review/) - Code review prompts and report templates
-- [../ops/RUNBOOK.md](../ops/RUNBOOK.md) - Operational procedures (created in Sprint 9)
-- [../ops/DATA_HANDLING.md](../ops/DATA_HANDLING.md) - Data handling policies (created in Sprint 9)
+- [../ops/code-review/](../ops/code-review/) - Code review prompts and report templates
+# - [../ops/RUNBOOK.md](../ops/RUNBOOK.md) - Operational procedures (Sprint 9)
+# - [../ops/DATA_HANDLING.md](../ops/DATA_HANDLING.md) - Data handling policies (Sprint 9)
 
 ### Architecture Reference
 
-- [../cmi-stageflow-architecture.md](../cmi-stageflow-architecture.md) - Stageflow integration details
 - [SOLID.md](SOLID.md) - SOLID principles implementation across codebase
 - [PRIVACY.md](PRIVACY.md) - Privacy layer implementation (Sprint 4)
-- Stageflow capabilities and patterns for CMI
 
 ---
 
@@ -41,14 +40,14 @@ This directory contains business and operational documentation for Aviva Intelli
 - **Sprint Planning:** [../ops/sprints/](../ops/sprints/)
 - **Sprint Roadmap:** [../ops/ROADMAP.md](../ops/ROADMAP.md)
 - **Sprint Template:** [../ops/SPRINT_TEMPLATE.md](../ops/SPRINT_TEMPLATE.md)
-- **Code Review:** [../ops/core-review/](../ops/core-review/)
+- **Code Review:** [../ops/code-review/](../ops/code-review/)
 ### API Documentation
 
 - [API.md](API.md) - REST API endpoints, authentication, and usage
 - [API_MODELS.md](API_MODELS.md) - Domain models and data structures
-- **Privacy & Security:** [ARCHITECTURE.md#8-data-protection-architecture](../ARCHITECTURE.md#8-data-protection-architecture)
-- **Pipeline Design:** [ARCHITECTURE.md#5-pipeline-design-stageflow](../ARCHITECTURE.md#5-pipeline-design-stageflow)
-- **Technology Stack:** [ARCHITECTURE.md#3-technology-stack](../ARCHITECTURE.md#3-technology-stack)
+- **Privacy & Security:** [ARCHITECTURE.md#8-data-protection-architecture](ARCHITECTURE.md#8-data-protection-architecture)
+- **Pipeline Design:** [ARCHITECTURE.md#5-pipeline-design-stageflow](ARCHITECTURE.md#5-pipeline-design-stageflow)
+- **Technology Stack:** [ARCHITECTURE.md#3-technology-stack](ARCHITECTURE.md#3-technology-stack)
 
 ---
 
@@ -78,6 +77,5 @@ When implementing features:
 ## Support
 
 For questions about documentation or architecture:
-- Review [ARCHITECTURE.md](../ARCHITECTURE.md) first
+- Review [ARCHITECTURE.md](ARCHITECTURE.md) first
 - Check relevant sprint document in [ops/sprints/](../ops/sprints/)
-- Consult [cmi-stageflow-architecture.md](../cmi-stageflow-architecture.md) for Stageflow details

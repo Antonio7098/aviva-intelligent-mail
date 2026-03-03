@@ -1,0 +1,13 @@
+Context (retrieved documents):
+
+{context}
+
+---
+
+Question: {question}
+
+Instructions:
+1. Answer the question using ONLY the context above
+2. If the context doesn't contain the answer, say so
+3. Cite all sources using the [email_hash:XXX] format
+4. Keep your answer concise and professional

@@ -69,7 +69,23 @@ class ActionExtractionStage:
         """Create RedactedEmail from stage context."""
         from src.domain.email import create_redacted_email_from_data
 
-        redaction_data = ctx.data.get("minimisation_redaction_data", {})
+        redaction_data = {
+            "email_hash": ctx.inputs.get_from(
+                "minimisation_redaction", "email_hash", default=""
+            ),
+            "subject": ctx.inputs.get_from(
+                "minimisation_redaction", "subject", default=""
+            ),
+            "body_text": ctx.inputs.get_from(
+                "minimisation_redaction", "body_text", default=""
+            ),
+            "sender": ctx.inputs.get_from(
+                "minimisation_redaction", "sender", default=""
+            ),
+            "recipient": ctx.inputs.get_from(
+                "minimisation_redaction", "recipient", default=""
+            ),
+        }
         return create_redacted_email_from_data(redaction_data)
 
     async def execute(self, ctx) -> StageOutput:
@@ -91,7 +107,12 @@ class ActionExtractionStage:
                 prompt_version=self._prompt_version,
             )
 
-            validation_result = safe_validate_action_extraction(raw_result)
+            raw_data = (
+                raw_result.model_dump()
+                if hasattr(raw_result, "model_dump")
+                else dict(raw_result)
+            )
+            validation_result = safe_validate_action_extraction(raw_data)
 
             if not validation_result.is_valid:
                 error_msg = f"Validation failed: {validation_result.errors}"
@@ -153,22 +174,6 @@ class ActionExtractionStage:
                     "stage": self.name,
                 },
             )
-
-            ctx.data["action_extraction_data"] = {
-                "email_hash": email.email_hash,
-                "actions": [
-                    {
-                        "action_type": a.action_type.value,
-                        "entity_refs": a.entity_refs,
-                        "deadline": a.deadline.isoformat() if a.deadline else None,
-                        "notes": a.notes,
-                    }
-                    for a in required_actions
-                ],
-                "confidence": confidence,
-                "model_name": self._llm_client.model_name,
-                "model_version": self._llm_client.model_version,
-            }
 
             return StageOutput.ok(
                 email_hash=email.email_hash,
