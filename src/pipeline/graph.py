@@ -8,7 +8,7 @@ import logging
 import os
 import random
 from enum import Enum
-from typing import Optional
+from typing import cast, Optional
 
 from stageflow import Pipeline, StageKind
 from stageflow.pipeline.dag import UnifiedStageGraph
@@ -197,16 +197,22 @@ def create_email_pipeline(
     )
 
     classification_stage = LLMClassificationStage(
-        llm_client=llm_client
-        or create_openai_client(
-            api_key=os.getenv("OPENROUTER_API_KEY", ""),
+        llm_client=cast(
+            LLMClient,
+            llm_client
+            or create_openai_client(
+                api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            ),
         )
     )
 
     action_stage = ActionExtractionStage(
-        llm_client=llm_client
-        or create_openai_client(
-            api_key=os.getenv("OPENROUTER_API_KEY", ""),
+        llm_client=cast(
+            LLMClient,
+            llm_client
+            or create_openai_client(
+                api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            ),
         )
     )
 

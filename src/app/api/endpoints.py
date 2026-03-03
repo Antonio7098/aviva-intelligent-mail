@@ -465,8 +465,12 @@ async def process_emails(
 
     for result in results:
         if isinstance(result, Exception):
-            logger.error("Task exception: %s", result)
+            logger.error("Task exception", extra={"error": str(result)})
             continue
+
+        if not isinstance(result, tuple):
+            continue
+
         email_idx, decision_data, error = result
         if error:
             continue
@@ -505,7 +509,7 @@ async def process_emails(
                 }
             )
         except Exception as e:
-            logger.warning("Failed to create decision output: %s", e)
+            logger.warning("Failed to create decision output", extra={"error": str(e)})
 
             decision = TriageDecisionOutput(**decision_data)
             decisions_output.append(decision)

@@ -9,9 +9,10 @@ embedding model (default: nvidia/llama-nemotron-embed-vl-1b-v2:free).
 
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 import chromadb
+import numpy as np
 from openai import AsyncOpenAI
 
 from src.app.config import settings
@@ -181,13 +182,14 @@ class ChromaVectorStore:
             if not ids:
                 return []
 
-            collection = self._client.get_or_create_collection(
+            client = cast(chromadb.ClientAPI, self._client)
+            collection = client.get_or_create_collection(
                 name=self._collection_name,
                 metadata={"hnsw:space": "cosine"},
             )
 
             collection.add(
-                embeddings=embeddings,
+                embeddings=np.array(embeddings).tolist(),
                 documents=texts,
                 metadatas=metadatas,
                 ids=ids,
@@ -226,13 +228,14 @@ class ChromaVectorStore:
             VectorStoreSearchError: If search fails
         """
         try:
-            collection = self._client.get_or_create_collection(
+            client = cast(chromadb.ClientAPI, self._client)
+            collection = client.get_or_create_collection(
                 name=self._collection_name,
                 metadata={"hnsw:space": "cosine"},
             )
 
             results = collection.query(
-                query_embeddings=[query_embedding],
+                query_embeddings=np.array([query_embedding]).tolist(),
                 n_results=top_k,
                 where=filters,
                 include=["documents", "metadatas", "distances"],
@@ -280,7 +283,8 @@ class ChromaVectorStore:
             VectorStoreError: If deletion fails
         """
         try:
-            collection = self._client.get_or_create_collection(
+            client = cast(chromadb.ClientAPI, self._client)
+            collection = client.get_or_create_collection(
                 name=self._collection_name,
             )
             collection.delete(ids=[email_hash])
@@ -320,7 +324,8 @@ class ChromaVectorStore:
             VectorStoreConnectionError: If health check fails
         """
         try:
-            self._client.heartbeat()
+            client = cast(chromadb.ClientAPI, self._client)
+            client.heartbeat()
             return True
         except Exception as e:
             logger.error(f"ChromaDB health check failed: {e}")

@@ -4,7 +4,7 @@
 import argparse
 import json
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 DEFAULT_BASE_URL = "http://localhost:8002/api/v1"
 
