@@ -252,13 +252,15 @@ class PIIRedactionEvaluator:
         for pattern in patterns:
             if len(pattern) == 3:
                 redacted = re.sub(
-                    pattern[0],
-                    pattern[1],
+                    pattern[0],  # type: ignore[arg-type]
+                    pattern[1],  # type: ignore[arg-type]
                     redacted,
                     flags=pattern[2],  # type: ignore[arg-type]
                 )
             else:
-                redacted = re.sub(pattern[0], pattern[1], redacted)
+                redacted = re.sub(  # type: ignore[arg-type]
+                    pattern[0], pattern[1], redacted
+                )
 
         return redacted
 
