@@ -47,6 +47,7 @@ ALLOWED_PAYLOAD_FIELDS = {
 
 FORBIDDEN_PATTERNS = [
     (r"body_text|body_html|email_body|raw_body", "raw email body"),
+    (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "raw email address"),
 ]
 
 
