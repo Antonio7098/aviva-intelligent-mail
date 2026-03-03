@@ -217,14 +217,23 @@ class OpenAIClient:
                     max_tokens=2048,
                 )
                 return result.model_dump_json()  # type: ignore[return-value]
-            else:
-                result = await self._client.chat.completions.create(  # type: ignore[call-overload]
-                    model=self._model,
-                    messages=messages,  # type: ignore[arg-type]
-                    temperature=temperature,
-                    max_tokens=2048,
-                )
-                return result.choices[0].message.content or ""  # type: ignore[union-attr]
+
+            # Use raw completion without response_model
+            from openai import AsyncOpenAI
+
+            raw_client = AsyncOpenAI(
+                base_url=self._base_url,
+                api_key=self._api_key,
+                timeout=60,
+                max_retries=0,
+            )
+            result = await raw_client.chat.completions.create(
+                model=self._model,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_tokens=2048,
+            )
+            return result.choices[0].message.content or ""
         except Exception as e:
             logger.error(f"LLM generate error: {e}")
             raise LLMError(f"LLM generation failed: {e}") from e
