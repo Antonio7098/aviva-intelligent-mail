@@ -250,6 +250,7 @@ Audit event model for the append-only event store.
 | `timestamp` | `datetime` | Event timestamp |
 | `actor` | `str?` | Actor/system component that generated the event |
 | `model_name` | `str?` | LLM model name used (if applicable) |
+| `model_version` | `str?` | Version of the model used |
 | `prompt_version` | `str?` | Version of the prompt used |
 | `ruleset_version` | `str?` | Version of the ruleset applied |
 | `status` | `str` | Event status (e.g., success, failure) |
@@ -270,6 +271,7 @@ Input model for creating a new audit event.
 | `stage` | `str` | Pipeline stage that generated this event |
 | `actor` | `str?` | Actor/system component |
 | `model_name` | `str?` | LLM model name used |
+| `model_version` | `str?` | Version of the model used |
 | `prompt_version` | `str?` | Version of the prompt used |
 | `ruleset_version` | `str?` | Version of the ruleset applied |
 | `status` | `str` | Event status |
@@ -281,9 +283,12 @@ Input model for creating a new audit event.
 
 | Event Type | Stage | Description |
 |------------|-------|-------------|
-| `EMAIL_REDACTED` | Stage 2 | Email PII redaction complete |
-| `LLM_CLASSIFIED` | Stage 3 | LLM classification complete |
-| `PRIORITY_ADJUSTED` | Stage 4 | Priority adjusted by rules |
-| `DECISION_STORED` | Stage 5 | Decision persisted to database |
-| `DIGEST_BUILT` | Stage 6 | Daily digest generated |
-| `QUERY_EXECUTED` | Stage 7 | Semantic query executed |
+| `EMAIL_INGESTED` | Stage 1 | Email ingested and parsed |
+| `CLASSIFIED_PLACEHOLDER` | Stage 2 | Placeholder classification complete |
+| `READ_MODELS_WRITTEN` | Stage 3 | Decisions persisted to database |
+| `EMAIL_REDACTED` | Stage 4 | Email PII redaction complete |
+| `LLM_CLASSIFIED` | Stage 5 | LLM classification complete |
+| `PRIORITY_ADJUSTED` | Stage 6 | Priority adjusted by rules |
+| `DECISION_STORED` | Stage 7 | Decision persisted to database |
+| `DIGEST_BUILT` | Stage 8 | Daily digest generated |
+| `QUERY_EXECUTED` | Stage 9 | Semantic query executed |

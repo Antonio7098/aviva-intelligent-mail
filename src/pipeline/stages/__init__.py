@@ -1,0 +1,11 @@
+"""Pipeline stages module initialization."""
+
+from src.pipeline.stages.ingestion import EmailIngestionStage
+from src.pipeline.stages.classification import PlaceholderClassificationStage
+from src.pipeline.stages.persistence import ReadModelWriterStage
+
+__all__ = [
+    "EmailIngestionStage",
+    "PlaceholderClassificationStage",
+    "ReadModelWriterStage",
+]

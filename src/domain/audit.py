@@ -29,6 +29,7 @@ class AuditEvent(BaseModel):
     model_name: Optional[str] = Field(
         None, description="LLM model name used (if applicable)"
     )
+    model_version: Optional[str] = Field(None, description="Version of the model used")
     prompt_version: Optional[str] = Field(
         None, description="Version of the prompt used"
     )
@@ -58,6 +59,7 @@ class AuditEventCreate(BaseModel):
     stage: str = Field(..., description="Pipeline stage that generated this event")
     actor: Optional[str] = Field(None, description="Actor/system component")
     model_name: Optional[str] = Field(None, description="LLM model name used")
+    model_version: Optional[str] = Field(None, description="Version of the model used")
     prompt_version: Optional[str] = Field(
         None, description="Version of the prompt used"
     )

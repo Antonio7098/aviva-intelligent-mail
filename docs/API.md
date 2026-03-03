@@ -122,3 +122,57 @@ Full OpenAPI 3.0 schema available at:
 - `/openapi.json`
 - `/docs` (Swagger UI)
 - `/redoc` (ReDoc)
+
+---
+
+## CLI
+
+Aviva Intelligent Mail provides a command-line interface for processing email batches.
+
+### Requirements
+
+- Python 3.11+
+- PostgreSQL database
+
+### Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+### Usage
+
+```bash
+# Process a batch of emails from JSON file
+python -m src.cli --input emails.json --run-id batch-001
+
+# With custom database URL
+python -m src.cli --input emails.json --run-id batch-001 --database-url postgresql://user:pass@localhost:5432/db
+```
+
+### Options
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--input` | `-i` | Path to JSON file containing email(s) to process |
+| `--run-id` | `-r` | Batch correlation ID for tracking |
+| `--database-url` | `-d` | Database connection URL (defaults to DATABASE_URL env var) |
+
+### JSON Input Format
+
+```json
+[
+  {
+    "email_id": "unique-email-id",
+    "subject": "Email subject",
+    "sender": "sender@example.com",
+    "recipient": "recipient@example.com",
+    "received_at": "2024-03-01T10:30:00Z",
+    "body_text": "Email body text",
+    "body_html": null,
+    "attachments": [],
+    "thread_id": null,
+    "headers": {}
+  }
+]
+```

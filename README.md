@@ -42,12 +42,34 @@ Aviva Intelligent Mail (AIM) is an AI-powered solution that classifies, prioriti
    ```
 3. **Start services**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
-4. **Run the application**
+4. **Run database migrations**
    ```bash
-   uvicorn app.main:app --reload
+   alembic upgrade head
    ```
+5. **Run the application**
+   ```bash
+   uvicorn src.app.main:app --reload
+   ```
+
+### CLI Usage
+
+Process email batches from JSON files:
+
+```bash
+# Process emails
+python -m src.cli --input emails.json --run-id batch-001
+
+# With custom database URL
+python -m src.cli --input emails.json --run-id batch-001 --database-url postgresql://user:pass@localhost:5432/db
+```
+
+**Environment Variables:**
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
 
 ## API Documentation
 
@@ -61,10 +83,17 @@ Once running, visit:
 src/
 ├── app/                    # FastAPI application
 ├── pipeline/               # Stageflow pipeline stages
+│   ├── stages/             # Pipeline stage implementations
+│   │   ├── ingestion.py    # Email ingestion stage
+│   │   ├── classification.py # Placeholder classification stage
+│   │   ├── persistence.py  # Read model writer stage
+│   │   └── audit_emitter.py # Audit event emitter
+│   └── graph.py            # Pipeline DAG construction
 ├── domain/                 # Domain models (Pydantic)
 ├── store/                 # Database and vector store
 ├── privacy/               # PII redaction and sanitisation
 ├── audit/                 # Audit event handling
+├── cli.py                 # CLI for batch processing
 tests/                     # Test suite
 ops/                       # Operational docs
 │   ├── sprints/            # Sprint plans

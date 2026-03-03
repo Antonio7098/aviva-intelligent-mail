@@ -20,9 +20,9 @@ class PostgresAuditSink:
     INSERT_QUERY = """
         INSERT INTO audit_events (
             event_id, correlation_id, email_hash, event_type, stage,
-            timestamp, actor, model_name, prompt_version, ruleset_version,
+            timestamp, actor, model_name, model_version, prompt_version, ruleset_version,
             status, payload_json, payload_hash
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     """
 
     def __init__(self, database: Database, privacy_sanitizer: Any = None):
@@ -88,6 +88,7 @@ class PostgresAuditSink:
                     timestamp,
                     event.actor,
                     event.model_name,
+                    event.model_version,
                     event.prompt_version,
                     event.ruleset_version,
                     event.status,
@@ -109,6 +110,7 @@ class PostgresAuditSink:
             timestamp=timestamp,
             actor=event.actor,
             model_name=event.model_name,
+            model_version=event.model_version,
             prompt_version=event.prompt_version,
             ruleset_version=event.ruleset_version,
             status=event.status,
@@ -147,7 +149,7 @@ class PostgresAuditSink:
         """
         query = """
             SELECT event_id, correlation_id, email_hash, event_type, stage,
-                   timestamp, actor, model_name, prompt_version, ruleset_version,
+                   timestamp, actor, model_name, model_version, prompt_version, ruleset_version,
                    status, payload_json, payload_hash
             FROM audit_events
             WHERE email_hash = $1
@@ -169,7 +171,7 @@ class PostgresAuditSink:
         """
         query = """
             SELECT event_id, correlation_id, email_hash, event_type, stage,
-                   timestamp, actor, model_name, prompt_version, ruleset_version,
+                   timestamp, actor, model_name, model_version, prompt_version, ruleset_version,
                    status, payload_json, payload_hash
             FROM audit_events
             WHERE correlation_id = $1
@@ -189,6 +191,7 @@ class PostgresAuditSink:
             timestamp=row["timestamp"],
             actor=row.get("actor"),
             model_name=row.get("model_name"),
+            model_version=row.get("model_version"),
             prompt_version=row.get("prompt_version"),
             ruleset_version=row.get("ruleset_version"),
             status=row["status"],
