@@ -1,7 +1,8 @@
 from __future__ import annotations
+import asyncio
 import hashlib
 import time
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from src.eval.runner import (
     BaseEvalRunner,
@@ -39,7 +40,11 @@ class PipelineEvaluator(BaseEvalRunner):
         self._database = database
         self._use_llm = use_llm and llm_client is not None
         self._prompt_version = "v1.0"
-        if self._use_llm and hasattr(llm_client, "model_name"):
+        if (
+            self._use_llm
+            and llm_client is not None
+            and hasattr(llm_client, "model_name")
+        ):
             self._model_name = llm_client.model_name
         else:
             self._model_name = "eval-placeholder"
@@ -67,11 +72,11 @@ class PipelineEvaluator(BaseEvalRunner):
         }
         redacted_email = create_redacted_email_from_data(redaction_data)
 
-        import asyncio
+        llm_client = cast(Any, self._llm_client)
 
         try:
             raw_result = asyncio.get_event_loop().run_until_complete(
-                self._llm_client.classify(
+                llm_client.classify(
                     email=redacted_email,
                     prompt_version=self._prompt_version,
                 )
@@ -147,11 +152,11 @@ class PipelineEvaluator(BaseEvalRunner):
         """
         from src.llm.schemas import safe_validate_action_extraction
 
-        import asyncio
+        llm_client = cast(Any, self._llm_client)
 
         try:
             raw_result = asyncio.get_event_loop().run_until_complete(
-                self._llm_client.extract_actions(
+                llm_client.extract_actions(
                     email=email,
                     prompt_version=self._prompt_version,
                 )

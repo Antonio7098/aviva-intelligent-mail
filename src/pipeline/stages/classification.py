@@ -107,11 +107,16 @@ class LLMClassificationStage:
                 prompt_version=self._prompt_version,
             )
 
-            raw_data = (
-                raw_result.model_dump()
-                if hasattr(raw_result, "model_dump")
-                else dict(raw_result)
-            )
+            if hasattr(raw_result, "model_dump"):
+                raw_data = raw_result.model_dump()
+            elif isinstance(raw_result, dict):
+                raw_data = raw_result
+            else:
+                raw_data = {
+                    "classification": "general",
+                    "priority": "p4_low",
+                    "confidence": 0.0,
+                }
             validation_result = safe_validate_classification(raw_data)
 
             if not validation_result.is_valid:
