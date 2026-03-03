@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Pipeline Status{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">Aviva Claims Mail Intelligence</div>
+            <div class="nav-links">
+                <a href="/upload">Upload</a>
+                <a href="/records">Records</a>
+                <a href="/query">Query</a>
+                <a href="/status">Status</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Pipeline Status</h1>
+            <p>Monitor processing jobs and their status.</p>
+
+            <div class="status-refresh">
+                <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+                <label>
+                    <input type="checkbox" id="autoRefresh" checked> Auto-refresh (10s)
+                </label>
+            </div>
+
+            <div class="status-summary">
+                <div class="status-box pending">
+                    <span class="count">{{ status_counts.pending }}</span>
+                    <span class="label">Pending</span>
+                </div>
+                <div class="status-box processing">
+                    <span class="count">{{ status_counts.processing }}</span>
+                    <span class="label">Processing</span>
+                </div>
+                <div class="status-box completed">
+                    <span class="count">{{ status_counts.completed }}</span>
+                    <span class="label">Completed</span>
+                </div>
+                <div class="status-box failed">
+                    <span class="count">{{ status_counts.failed }}</span>
+                    <span class="label">Failed</span>
+                </div>
+            </div>
+
+            {% if jobs %}
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>Correlation ID</th>
+                        <th>Handler ID</th>
+                        <th>Status</th>
+                        <th>Total Processed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr class="status-row status-{{ job.status }}">
+                        <td class="correlation-id">{{ job.correlation_id }}</td>
+                        <td>{{ job.handler_id }}</td>
+                        <td>
+                            <span class="status-badge status-{{ job.status }}">
+                                {{ job.status }}
+                            </span>
+                            {% if job.error_message %}
+                            <span class="error-reason" title="{{ job.error_message }}">⚠️</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ job.total_processed }}</td>
+                        <td>
+                            {% if job.status == 'failed' %}
+                            <button class="btn btn-small btn-retry" data-correlation-id="{{ job.correlation_id }}">Retry</button>
+                            {% endif %}
+                            <a href="/results/{{ job.correlation_id }}" class="btn btn-small">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="no-records">No processing jobs found.</p>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer>
+        <p>Aviva Claims Mail Intelligence - Privacy-first email triage</p>
+    </footer>
+
+    <script>
+        let autoRefreshInterval;
+
+        function refreshStatus() {
+            fetch('/api/v1/jobs')
+                .then(response => response.json())
+                .then(data => {
+                    location.reload();
+                })
+                .catch(error => {
+                    console.error('Error refreshing status:', error);
+                });
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', refreshStatus);
+
+        document.getElementById('autoRefresh').addEventListener('change', function() {
+            if (this.checked) {
+                autoRefreshInterval = setInterval(refreshStatus, 10000);
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+
+        if (document.getElementById('autoRefresh').checked) {
+            autoRefreshInterval = setInterval(refreshStatus, 10000);
+        }
+
+        document.querySelectorAll('.btn-retry').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const correlationId = this.dataset.correlationId;
+                if (confirm('Retry processing this job?')) {
+                    try {
+                        const response = await fetch(`/api/v1/jobs/${correlationId}/retry`, {
+                            method: 'POST'
+                        });
+                        if (response.ok) {
+                            refreshStatus();
+                        } else {
+                            alert('Failed to retry job');
+                        }
+                    } catch (e) {
+                        alert('Error: ' + e.message);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

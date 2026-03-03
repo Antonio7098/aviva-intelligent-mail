@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Query Interface{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">Aviva Claims Mail Intelligence</div>
+            <div class="nav-links">
+                <a href="/upload">Upload</a>
+                <a href="/records">Records</a>
+                <a href="/query">Query</a>
+                <a href="/status">Status</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Query Processed Emails</h1>
+            <p>Ask questions about the processed emails. Answers are generated only from redacted summaries.</p>
+
+            <div class="query-section">
+                <form id="queryForm">
+                    <div class="query-input">
+                        <label for="question">Your Question:</label>
+                        <textarea
+                            name="question"
+                            id="question"
+                            rows="3"
+                            placeholder="e.g., What are the recent claims about water damage?"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Ask Question</button>
+                    </div>
+                </form>
+
+                <div id="queryLoading" class="loading" style="display: none;">
+                    <p>Processing query...</p>
+                </div>
+
+                <div id="queryResult" class="query-result" style="display: none;">
+                    <h2>Answer</h2>
+                    <div id="answerContent"></div>
+
+                    <div id="citationsSection" style="display: none;">
+                        <h3>Citations (Email Hash References)</h3>
+                        <ul id="citationsList"></ul>
+                    </div>
+
+                    <div id="noEvidence" class="no-evidence" style="display: none;">
+                        <p>No evidence found for the given query.</p>
+                    </div>
+                </div>
+
+                <div id="queryError" class="error-box" style="display: none;">
+                    <h3>Error</h3>
+                    <p id="errorMessage"></p>
+                </div>
+            </div>
+
+            <div class="query-examples">
+                <h3>Example Questions</h3>
+                <ul>
+                    <li><button class="example-btn" data-question="What are the recent claims?">What are the recent claims?</button></li>
+                    <li><button class="example-btn" data-question="Show me all high priority emails">Show me all high priority emails</button></li>
+                    <li><button class="example-btn" data-question="What complaints have been received?">What complaints have been received?</button></li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Aviva Claims Mail Intelligence - Privacy-first email triage</p>
+    </footer>
+
+    <script>
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('question').value = this.dataset.question;
+            });
+        });
+
+        document.getElementById('queryForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const question = document.getElementById('question').value;
+            const loadingDiv = document.getElementById('queryLoading');
+            const resultDiv = document.getElementById('queryResult');
+            const answerContent = document.getElementById('answerContent');
+            const citationsSection = document.getElementById('citationsSection');
+            const citationsList = document.getElementById('citationsList');
+            const noEvidenceDiv = document.getElementById('noEvidence');
+            const errorDiv = document.getElementById('queryError');
+            const errorMessage = document.getElementById('errorMessage');
+
+            loadingDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/v1/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const result = await response.json();
+
+                loadingDiv.style.display = 'none';
+
+                if (response.ok) {
+                    resultDiv.style.display = 'block';
+
+                    if (result.answer === 'no_evidence_found' || !result.answer) {
+                        noEvidenceDiv.style.display = 'block';
+                        answerContent.innerHTML = '';
+                        citationsSection.style.display = 'none';
+                    } else {
+                        noEvidenceDiv.style.display = 'none';
+                        answerContent.innerHTML = `<p>${result.answer}</p>`;
+
+                        if (result.citations && result.citations.length > 0) {
+                            citationsSection.style.display = 'block';
+                            citationsList.innerHTML = result.citations.map(hash =>
+                                `<li><code>${hash}</code> <a href="/records/${hash}" class="btn btn-small">View</a></li>`
+                            ).join('');
+                        } else {
+                            citationsSection.style.display = 'none';
+                        }
+                    }
+                } else {
+                    errorDiv.style.display = 'block';
+                    errorMessage.textContent = result.detail || 'Unknown error';
+                }
+            } catch (e) {
+                loadingDiv.style.display = 'none';
+                errorDiv.style.display = 'block';
+                errorMessage.textContent = e.message;
+            }
+        });
+    </script>
+</body>
+</html>

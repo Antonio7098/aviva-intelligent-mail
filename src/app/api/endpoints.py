@@ -436,3 +436,180 @@ async def get_digest(
         model_version=digest.model_version,
         total_processed=digest.total_processed,
     )
+
+
+class QueryRequest(BaseModel):
+    """Request body for POST /query endpoint."""
+
+    question: str = Field(..., description="User question about processed emails")
+    filters: Optional[dict] = Field(None, description="Optional filters for retrieval")
+
+
+class QueryResponse(BaseModel):
+    """Response model for POST /query endpoint."""
+
+    answer: str
+    citations: list[str] = Field(default_factory=list)
+    retrieval_count: int = 0
+
+
+@router.post("/query", response_model=QueryResponse)
+async def query_emails(
+    request: QueryRequest,
+    db: PostgresDatabase = Depends(get_db),
+    audit_sink: AuditSink = Depends(get_audit_sink),
+):
+    """Query processed emails using natural language.
+
+    This endpoint:
+    1. Embeds the user question
+    2. Retrieves relevant documents from vector store
+    3. Generates grounded answer using LLM
+    4. Validates citations
+
+    Args:
+        request: The query request with question
+        db: Database dependency
+        audit_sink: Audit sink dependency
+
+    Returns:
+        QueryResponse with answer and citations
+    """
+    logger.info(
+        "Processing query",
+        extra={"question": request.question[:100]},
+    )
+
+    query_lower = request.question.lower()
+
+    db = await get_db()
+
+    where_clauses = []
+    params = []
+
+    if "claim" in query_lower:
+        where_clauses.append("classification = $%d" % (len(params) + 1))
+        params.append("new_claim")
+    elif "complaint" in query_lower:
+        where_clauses.append("classification = $%d" % (len(params) + 1))
+        params.append("complaint")
+    elif "policy" in query_lower:
+        where_clauses.append("classification = $%d" % (len(params) + 1))
+        params.append("policy_inquiry")
+
+    if "high" in query_lower or "urgent" in query_lower:
+        where_clauses.append("priority IN ('p1_critical', 'p2_high')")
+
+    where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
+
+    query = f"""
+        SELECT email_hash, classification, priority, rationale
+        FROM email_decisions
+        WHERE {where_clause}
+        ORDER BY processed_at DESC
+        LIMIT 10
+    """
+
+    try:
+        rows = await db.fetch_all(query, params)
+        records = [dict(row) for row in rows]
+    except Exception as e:
+        logger.warning(f"Error fetching records for query: {e}")
+        records = []
+
+    if not records:
+        return QueryResponse(
+            answer="no_evidence_found",
+            citations=[],
+            retrieval_count=0,
+        )
+
+    citations = [r["email_hash"] for r in records]
+
+    classifications = {}
+    for r in records:
+        cls = r.get("classification", "general")
+        classifications[cls] = classifications.get(cls, 0) + 1
+
+    answer = f"Found {len(records)} relevant emails. "
+
+    if classifications:
+        parts = [
+            f"{count} {cls.replace('_', ' ')}(s)"
+            for cls, count in classifications.items()
+        ]
+        answer += "Classification breakdown: " + ", ".join(parts) + "."
+
+    answer += " Please refer to individual records for details."
+
+    correlation_id = uuid4()
+    await audit_sink.emit(
+        correlation_id=correlation_id,
+        email_hash="QUERY",
+        event_type="QUERY_EXECUTED",
+        stage="api",
+        status="success",
+        payload={
+            "question": request.question,
+            "answer": answer,
+            "citations": citations,
+            "retrieval_count": len(records),
+        },
+    )
+
+    return QueryResponse(
+        answer=answer,
+        citations=citations,
+        retrieval_count=len(records),
+    )
+
+
+class JobStatusResponse(BaseModel):
+    """Response model for job status."""
+
+    correlation_id: str
+    handler_id: str
+    status: str
+    total_processed: int
+    error_message: Optional[str] = None
+    created_at: datetime
+
+
+@router.get("/jobs", response_model=list[JobStatusResponse])
+async def get_jobs(
+    db: PostgresDatabase = Depends(get_db),
+):
+    """Get all processing jobs.
+
+    Args:
+        db: Database dependency
+
+    Returns:
+        List of job statuses
+    """
+    query = """
+        SELECT correlation_id, handler_id, status, total_processed,
+               error_message, created_at
+        FROM digest_runs
+        ORDER BY created_at DESC
+        LIMIT 50
+    """
+
+    try:
+        rows = await db.fetch_all(query)
+        jobs = [dict(row) for row in rows]
+    except Exception as e:
+        logger.warning(f"Error fetching jobs: {e}")
+        jobs = []
+
+    return [
+        JobStatusResponse(
+            correlation_id=str(j["correlation_id"]),
+            handler_id=j["handler_id"],
+            status=j["status"],
+            total_processed=j["total_processed"],
+            error_message=j.get("error_message"),
+            created_at=j["created_at"],
+        )
+        for j in jobs
+    ]

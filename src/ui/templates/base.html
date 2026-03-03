@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Aviva Claims Mail Intelligence{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">Aviva Claims Mail Intelligence</div>
+            <div class="nav-links">
+                <a href="/upload">Upload</a>
+                <a href="/records">Records</a>
+                <a href="/query">Query</a>
+                <a href="/status">Status</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>Aviva Claims Mail Intelligence - Privacy-first email triage</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

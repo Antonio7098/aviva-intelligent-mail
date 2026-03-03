@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Results{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">Aviva Claims Mail Intelligence</div>
+            <div class="nav-links">
+                <a href="/upload">Upload</a>
+                <a href="/records">Records</a>
+                <a href="/query">Query</a>
+                <a href="/status">Status</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Processing Results</h1>
+            <p><strong>Correlation ID:</strong> {{ correlation_id }}</p>
+
+            {% if decisions %}
+            <div class="decisions-list">
+                {% for decision in decisions %}
+                <div class="decision-card">
+                    <div class="decision-header">
+                        <span class="email-hash">{{ decision.email_hash }}</span>
+                        <span class="priority priority-{{ decision.adjusted_priority }}">{{ decision.adjusted_priority or decision.priority }}</span>
+                    </div>
+
+                    <div class="decision-body">
+                        <div class="decision-field">
+                            <label>Classification:</label>
+                            <span class="classification classification-{{ decision.classification }}">{{ decision.classification }}</span>
+                        </div>
+
+                        <div class="decision-field">
+                            <label>Confidence:</label>
+                            <span>{{ "%.1f"|format(decision.confidence * 100) }}%</span>
+                        </div>
+
+                        <div class="decision-field">
+                            <label>Rationale:</label>
+                            <p>{{ decision.rationale }}</p>
+                        </div>
+
+                        {% if decision.risk_tags %}
+                        <div class="decision-field">
+                            <label>Risk Tags:</label>
+                            <div class="risk-tags">
+                                {% for tag in decision.risk_tags %}
+                                <span class="risk-tag">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="decision-field">
+                            <label>Processed:</label>
+                            <span>{{ decision.processed_at }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No decisions found for this correlation ID.</p>
+            {% endif %}
+
+            {% if digest %}
+            <div class="digest-section">
+                <h2>Daily Digest</h2>
+                <div class="digest-stats">
+                    <div class="stat">
+                        <label>Total Processed:</label>
+                        <span>{{ digest.total_processed }}</span>
+                    </div>
+                    <div class="stat">
+                        <label>New Claims:</label>
+                        <span>{{ digest.summary_counts.new_claims }}</span>
+                    </div>
+                    <div class="stat">
+                        <label>Claim Updates:</label>
+                        <span>{{ digest.summary_counts.claim_updates }}</span>
+                    </div>
+                    <div class="stat">
+                        <label>Policy Inquiries:</label>
+                        <span>{{ digest.summary_counts.policy_inquiries }}</span>
+                    </div>
+                    <div class="stat">
+                        <label>Complaints:</label>
+                        <span>{{ digest.summary_counts.complaints }}</span>
+                    </div>
+                    <div class="stat">
+                        <label>General:</label>
+                        <span>{{ digest.summary_counts.general }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="actions">
+                <a href="/records" class="btn btn-secondary">Browse Records</a>
+                <a href="/upload" class="btn btn-primary">Upload More</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Aviva Claims Mail Intelligence - Privacy-first email triage</p>
+    </footer>
+</body>
+</html>

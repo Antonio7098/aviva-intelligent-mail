@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Upload Emails{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">Aviva Claims Mail Intelligence</div>
+            <div class="nav-links">
+                <a href="/upload">Upload</a>
+                <a href="/records">Records</a>
+                <a href="/query">Query</a>
+                <a href="/status">Status</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Upload Emails</h1>
+
+            <div class="upload-section">
+                <p>Paste JSON email data in the text area below. The JSON should follow this format:</p>
+
+                <div class="json-format">
+                    <pre>{
+  "emails": [
+    {
+      "messages": [
+        {
+          "body": "Email body text...",
+          "subject": "Email Subject",
+          "sent_from": "sender@example.com",
+          "sent_to": ["recipient@example.com"],
+          "sent_cc": [],
+          "date_sent": "2026-02-02T10:48:00Z",
+          "attachments": [],
+          "message_id": "<unique-id@example.com>",
+          "thread_id": "thread_123"
+        }
+      ]
+    }
+  ]
+}</pre>
+                </div>
+
+                <form id="uploadForm" method="post" action="/api/v1/process">
+                    <textarea
+                        name="emails_json"
+                        id="emailsJson"
+                        rows="15"
+                        placeholder="Paste your JSON here..."
+                        required
+                    ></textarea>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Process Emails</button>
+                        <button type="button" class="btn btn-secondary" id="validateBtn">Validate JSON</button>
+                    </div>
+
+                    <div id="validationResult" class="validation-result"></div>
+                </form>
+
+                <div id="resultSection" class="result-section" style="display: none;">
+                    <h2>Processing Result</h2>
+                    <div id="resultContent"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Aviva Claims Mail Intelligence - Privacy-first email triage</p>
+    </footer>
+
+    <script>
+        document.getElementById('validateBtn').addEventListener('click', function() {
+            const jsonInput = document.getElementById('emailsJson').value;
+            const resultDiv = document.getElementById('validationResult');
+
+            try {
+                const parsed = JSON.parse(jsonInput);
+                resultDiv.className = 'validation-result success';
+                resultDiv.textContent = '✓ Valid JSON';
+            } catch (e) {
+                resultDiv.className = 'validation-result error';
+                resultDiv.textContent = '✗ Invalid JSON: ' + e.message;
+            }
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const jsonInput = document.getElementById('emailsJson').value;
+            const resultSection = document.getElementById('resultSection');
+            const resultContent = document.getElementById('resultContent');
+
+            try {
+                const parsed = JSON.parse(jsonInput);
+
+                const response = await fetch('/api/v1/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(parsed)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    resultContent.innerHTML = `
+                        <div class="success-box">
+                            <h3>✓ Processing Complete</h3>
+                            <p><strong>Correlation ID:</strong> ${result.correlation_id}</p>
+                            <p><strong>Total Processed:</strong> ${result.total_processed}</p>
+                            <p><strong>Handler ID:</strong> ${result.handler_id}</p>
+                            <a href="/results/${result.correlation_id}" class="btn btn-primary">View Results</a>
+                        </div>
+                    `;
+                } else {
+                    resultContent.innerHTML = `
+                        <div class="error-box">
+                            <h3>✗ Processing Failed</h3>
+                            <p>${result.detail || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+
+                resultSection.style.display = 'block';
+            } catch (e) {
+                resultContent.innerHTML = `
+                    <div class="error-box">
+                        <h3>✗ Error</h3>
+                        <p>${e.message}</p>
+                    </div>
+                `;
+                resultSection.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Browse Records{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">Aviva Claims Mail Intelligence</div>
+            <div class="nav-links">
+                <a href="/upload">Upload</a>
+                <a href="/records">Records</a>
+                <a href="/query">Query</a>
+                <a href="/status">Status</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Browse Records</h1>
+
+            <div class="filters">
+                <form method="get" action="/records">
+                    <div class="filter-row">
+                        <div class="filter-field">
+                            <label for="search">Search by Email Hash:</label>
+                            <input type="text" name="search" id="search" value="{{ search or '' }}" placeholder="Enter email hash...">
+                        </div>
+
+                        <div class="filter-field">
+                            <label for="classification">Classification:</label>
+                            <select name="classification" id="classification">
+                                <option value="">All</option>
+                                <option value="new_claim" {% if classification == 'new_claim' %}selected{% endif %}>New Claim</option>
+                                <option value="claim_update" {% if classification == 'claim_update' %}selected{% endif %}>Claim Update</option>
+                                <option value="policy_inquiry" {% if classification == 'policy_inquiry' %}selected{% endif %}>Policy Inquiry</option>
+                                <option value="complaint" {% if classification == 'complaint' %}selected{% endif %}>Complaint</option>
+                                <option value="renewal" {% if classification == 'renewal' %}selected{% endif %}>Renewal</option>
+                                <option value="cancellation" {% if classification == 'cancellation' %}selected{% endif %}>Cancellation</option>
+                                <option value="general" {% if classification == 'general' %}selected{% endif %}>General</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-field">
+                            <label for="priority">Priority:</label>
+                            <select name="priority" id="priority">
+                                <option value="">All</option>
+                                <option value="p1_critical" {% if priority == 'p1_critical' %}selected{% endif %}>P1 Critical</option>
+                                <option value="p2_high" {% if priority == 'p2_high' %}selected{% endif %}>P2 High</option>
+                                <option value="p3_medium" {% if priority == 'p3_medium' %}selected{% endif %}>P3 Medium</option>
+                                <option value="p4_low" {% if priority == 'p4_low' %}selected{% endif %}>P4 Low</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                    </div>
+                </form>
+            </div>
+
+            {% if records %}
+            <table class="records-table">
+                <thead>
+                    <tr>
+                        <th>Email Hash</th>
+                        <th>Classification</th>
+                        <th>Priority</th>
+                        <th>Confidence</th>
+                        <th>Processed At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td class="email-hash">{{ record.email_hash }}</td>
+                        <td><span class="classification classification-{{ record.classification }}">{{ record.classification }}</span></td>
+                        <td><span class="priority priority-{{ record.priority }}">{{ record.priority }}</span></td>
+                        <td>{{ "%.1f"|format(record.confidence * 100) }}%</td>
+                        <td>{{ record.processed_at }}</td>
+                        <td><a href="/records/{{ record.email_hash }}" class="btn btn-small">View</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="pagination">
+                {% if page > 1 %}
+                <a href="/records?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}{% if classification %}&classification={{ classification }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}" class="btn btn-secondary">Previous</a>
+                {% endif %}
+                <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
+                {% if page < total_pages %}
+                <a href="/records?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}{% if classification %}&classification={{ classification }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}" class="btn btn-secondary">Next</a>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="no-records">No records found.</p>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer>
+        <p>Aviva Claims Mail Intelligence - Privacy-first email triage</p>
+    </footer>
+</body>
+</html>
