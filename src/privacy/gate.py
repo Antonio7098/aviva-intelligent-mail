@@ -1,7 +1,6 @@
 import logging
 
-from stageflow import StageContext
-from stageflow.pipeline.interceptors import InterceptorResult
+from stageflow import Unit, UnitResult
 
 logger = logging.getLogger(__name__)
 
@@ -28,49 +27,75 @@ class PrivacyGateInterceptor:
         """
         self._log_bypass_attempts = log_bypass_attempts
 
-    def intercept(self, ctx: StageContext) -> InterceptorResult:
+    def intercept(self, unit: Unit) -> UnitResult:
         """Intercept unit execution to enforce privacy gate.
 
         Args:
-            ctx: The Stageflow context being executed
+            unit: The Stageflow unit being executed
 
         Returns:
-            InterceptorResult allowing or blocking execution
+            UnitResult allowing or blocking execution
         """
-        if ctx.stage_name != self.CLASSIFICATION_STAGE:
-            return InterceptorResult(stage_ran=True)
+        if unit.stage_name != self.CLASSIFICATION_STAGE:
+            return UnitResult.ok()
 
-        if self._contains_raw_body(ctx):
-            if self._log_bypass_attempts:
-                logger.warning(
-                    "Privacy gate: raw body detected in classification input",
-                    extra={"stage": self.CLASSIFICATION_STAGE},
-                )
-            return InterceptorResult(
-                stage_ran=False,
-                error="Privacy gate blocked: raw body text cannot pass to classification",
+        if not self._verify_redaction_completed(unit):
+            return UnitResult.fail(
+                error="Privacy gate blocked: redaction stage must complete before classification",
+                data={
+                    "stage": self.CLASSIFICATION_STAGE,
+                    "reason": "Redaction stage not completed",
+                },
             )
 
-        return InterceptorResult(stage_ran=True)
+        if self._contains_raw_body(unit):
+            return UnitResult.fail(
+                error="Privacy gate blocked: raw body text cannot pass to classification",
+                data={
+                    "stage": self.CLASSIFICATION_STAGE,
+                    "reason": "Raw body detected in input",
+                },
+            )
 
-    def _contains_raw_body(self, ctx: StageContext) -> bool:
-        """Check if context inputs contain raw body text.
+        return UnitResult.ok()
+
+    def _verify_redaction_completed(self, unit: Unit) -> bool:
+        """Verify that redaction stage has completed successfully.
 
         Args:
-            ctx: The context being checked
+            unit: The unit being checked
 
         Returns:
-            True if raw body detected
+            True if redaction completed, False otherwise
         """
-        if not hasattr(ctx, "inputs"):
+        if hasattr(unit, "completed_stages"):
+            return self.REDACTION_STAGE in getattr(unit, "completed_stages", [])
+
+        return True
+
+    def _contains_raw_body(self, unit: Unit) -> bool:
+        """Check if unit inputs contain raw body text.
+
+        Args:
+            unit: The unit being checked
+
+        Returns:
+            True if raw body detected, False otherwise
+        """
+        if not hasattr(unit, "inputs"):
             return False
 
-        inputs = ctx.inputs
+        inputs = unit.inputs
 
         if hasattr(inputs, "get"):
             for field in self.FORBIDDEN_FIELDS:
                 value = inputs.get(field)
                 if value and isinstance(value, str) and len(value) > 0:
+                    if self._log_bypass_attempts:
+                        logger.warning(
+                            f"Privacy gate: raw body field '{field}' detected in classification input",
+                            extra={"stage": self.CLASSIFICATION_STAGE},
+                        )
                     return True
 
         return False

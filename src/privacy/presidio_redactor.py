@@ -1,12 +1,8 @@
 import logging
-from typing import cast
 
 from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
-from presidio_anonymizer.entities.engine.recognizer_result import (
-    RecognizerResult as AnonymizerResult,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -116,12 +112,9 @@ class PresidioRedactor:
 
             operator_config = self._build_operator_config()
 
-            anonymizer_results: list[AnonymizerResult] = cast(
-                list[AnonymizerResult], entities
-            )
             result = self._anonymizer.anonymize(
                 text=text,
-                analyzer_results=anonymizer_results,
+                analyzer_results=entities,
                 operators=operator_config,
             )
 
@@ -161,7 +154,7 @@ class PresidioRedactor:
                     result[entity_type] = []
                 result[entity_type].append(
                     {
-                        "text": text[entity.start : entity.end],
+                        "text": entity.text,
                         "start": entity.start,
                         "end": entity.end,
                         "score": entity.score,
@@ -232,8 +225,6 @@ class PresidioRedactor:
 
         for entity in entities:
             entity_type = entity.entity_type
-            if entity_type is None:
-                continue
             display_type = entity_type_map.get(entity_type, entity_type)
 
             counts[display_type] = counts.get(display_type, 0) + 1
