@@ -8,6 +8,7 @@ from stageflow import StageKind, StageOutput
 
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.privacy.preprocessing import EmailPreprocessor
+from src.privacy.presidio_redactor import PresidioRedactor
 from src.privacy.redactor import PIIRedactor
 from src.privacy.sanitizer import PrivacySanitizer
 
@@ -37,9 +38,10 @@ class MinimisationRedactionStage:
             privacy_sanitizer: Privacy sanitizer for event payloads
             audit_emitter: Optional audit event emitter
         """
-        self._pii_redactor = pii_redactor or EmailPreprocessor()
+        self._pii_redactor = pii_redactor or PresidioRedactor()
         self._privacy_sanitizer = privacy_sanitizer
         self._audit_emitter = audit_emitter
+        self._preprocessor = EmailPreprocessor()
 
     @property
     def audit_emitter(self) -> Optional[AuditEmitter]:
@@ -200,8 +202,7 @@ class MinimisationRedactionStage:
                     data={"stage": self.name},
                 )
 
-            preprocessor = EmailPreprocessor()
-            preprocessed = preprocessor.preprocess(
+            preprocessed = self._preprocessor.preprocess(
                 subject=subject,
                 body_text=body_text,
                 body_html=body_html,
