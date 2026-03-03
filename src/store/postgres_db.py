@@ -1,7 +1,7 @@
 import os
 from typing import Any
-import asyncpg  # type: ignore[import-not-found]
-from asyncpg import Connection, Pool  # type: ignore[import-not-found]
+import asyncpg  # type: ignore[import-untyped]
+from asyncpg import Connection, Pool  # type: ignore[import-untyped]
 
 from src.store.database import Database, Transaction
 
