@@ -14,6 +14,7 @@ import os
 
 import instructor
 from openai import AsyncOpenAI
+from pydantic import BaseModel
 
 from src.domain.email import RedactedEmail
 from src.llm.client import (
@@ -98,10 +99,11 @@ class OpenAIClient:
         Returns:
             ClassificationOutput with classification, confidence, priority, and rationale
         """
-        from src.llm.prompts import get_classification_prompt
+        from src.llm.prompts import get_classification_prompt, sanitize_user_input
 
         prompt = get_classification_prompt(prompt_version)
         email_text = f"Subject: {email.subject}\n\n{email.body_text}"
+        email_text = sanitize_user_input(email_text)
 
         try:
             result = await self._client.chat.completions.create(
@@ -112,6 +114,8 @@ class OpenAIClient:
                 ],
                 response_model=ClassificationOutput,
                 max_retries=self._max_retries,
+                temperature=0.0,
+                max_tokens=1024,
             )
             return result
         except Exception as e:
@@ -141,10 +145,11 @@ class OpenAIClient:
         Returns:
             ActionExtractionOutput with list of actions and confidence
         """
-        from src.llm.prompts import get_action_extraction_prompt
+        from src.llm.prompts import get_action_extraction_prompt, sanitize_user_input
 
         prompt = get_action_extraction_prompt(prompt_version)
         email_text = f"Subject: {email.subject}\n\n{email.body_text}"
+        email_text = sanitize_user_input(email_text)
 
         try:
             result = await self._client.chat.completions.create(
@@ -155,6 +160,8 @@ class OpenAIClient:
                 ],
                 response_model=ActionExtractionOutput,
                 max_retries=self._max_retries,
+                temperature=0.0,
+                max_tokens=1024,
             )
             return result
         except Exception as e:
@@ -171,6 +178,56 @@ class OpenAIClient:
             else:
                 logger.error(f"LLM error: {e}")
                 raise LLMError(f"LLM request failed: {e}") from e
+
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        temperature: float = 0.0,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | BaseModel:
+        """Generate a response using the LLM.
+
+        This is a general-purpose method for more flexible LLM usage.
+
+        Args:
+            prompt: The user prompt
+            system_prompt: Optional system prompt
+            temperature: Temperature setting (0.0 for deterministic)
+            response_model: Optional Pydantic model for structured output
+
+        Returns:
+            Generated text
+
+        Raises:
+            LLMError: If generation fails
+        """
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            if response_model:
+                result = await self._client.chat.completions.create(
+                    model=self._model,
+                    messages=messages,  # type: ignore[arg-type]
+                    response_model=response_model,
+                    temperature=temperature,
+                    max_tokens=2048,
+                )
+                return result.model_dump_json()  # type: ignore[return-value]
+            else:
+                result = await self._client.chat.completions.create(  # type: ignore[call-overload]
+                    model=self._model,
+                    messages=messages,  # type: ignore[arg-type]
+                    temperature=temperature,
+                    max_tokens=2048,
+                )
+                return result.choices[0].message.content or ""  # type: ignore[union-attr]
+        except Exception as e:
+            logger.error(f"LLM generate error: {e}")
+            raise LLMError(f"LLM generation failed: {e}") from e
 
 
 def create_openai_client(api_key: str = "", **kwargs) -> OpenAIClient:

@@ -67,43 +67,10 @@ class LLMClassificationStage:
 
     def _create_redacted_email(self, ctx) -> RedactedEmail:
         """Create RedactedEmail from stage context."""
-        from datetime import timezone, datetime
-        from typing import Any
+        from src.domain.email import create_redacted_email_from_data
 
-        redaction_data: dict[str, Any] = ctx.data.get("minimisation_redaction_data", {})
-
-        email_hash = str(redaction_data.get("email_hash", ""))
-        subject = str(redaction_data.get("subject", ""))
-        sender = str(redaction_data.get("sender", ""))
-        recipient = str(redaction_data.get("recipient", ""))
-        body_text = str(redaction_data.get("body_text", ""))
-        attachments = list(redaction_data.get("attachments", []))
-        pii_counts = dict(redaction_data.get("pii_counts", {}))
-        received_at_str = redaction_data.get("received_at")
-        body_html = redaction_data.get("body_html")
-        thread_id: str | None = redaction_data.get("thread_id")
-
-        if received_at_str:
-            received_at = datetime.fromisoformat(
-                str(received_at_str).replace("Z", "+00:00")
-            )
-        else:
-            received_at = datetime.now(timezone.utc)
-
-        return RedactedEmail(
-            email_id=email_hash,
-            email_hash=email_hash,
-            subject=subject,
-            sender=sender,
-            recipient=recipient,
-            received_at=received_at,
-            body_text=body_text,
-            body_html=body_html,
-            attachments=attachments,
-            pii_counts=pii_counts,
-            thread_id=thread_id,
-            redacted_at=datetime.now(timezone.utc),
-        )
+        redaction_data = ctx.data.get("minimisation_redaction_data", {})
+        return create_redacted_email_from_data(redaction_data)
 
     async def execute(self, ctx) -> StageOutput:
         """Execute the LLM classification stage.
