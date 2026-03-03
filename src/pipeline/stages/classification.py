@@ -107,7 +107,12 @@ class LLMClassificationStage:
                 prompt_version=self._prompt_version,
             )
 
-            validation_result = safe_validate_classification(raw_result)
+            raw_data = (
+                raw_result.model_dump()
+                if hasattr(raw_result, "model_dump")
+                else dict(raw_result)
+            )
+            validation_result = safe_validate_classification(raw_data)
 
             if not validation_result.is_valid:
                 error_msg = f"Validation failed: {validation_result.errors}"
@@ -161,17 +166,6 @@ class LLMClassificationStage:
                     "stage": self.name,
                 },
             )
-
-            ctx.data["llm_classification_data"] = {
-                "email_hash": email.email_hash,
-                "classification": classification,
-                "confidence": confidence,
-                "priority": priority,
-                "rationale": rationale,
-                "risk_tags": risk_tags,
-                "model_name": self._llm_client.model_name,
-                "model_version": self._llm_client.model_version,
-            }
 
             return StageOutput.ok(
                 email_hash=email.email_hash,

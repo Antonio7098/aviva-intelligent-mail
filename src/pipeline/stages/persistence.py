@@ -68,7 +68,7 @@ class ReadModelWriterStage:
             return
 
         email_hash = ctx.inputs.get_from(
-            "placeholder_classification", "email_hash", default="UNKNOWN"
+            "llm_classification", "email_hash", default="UNKNOWN"
         )
 
         await self._audit_emitter.emit(
@@ -121,39 +121,31 @@ class ReadModelWriterStage:
             StageOutput with write confirmation
         """
         try:
-            llm_data = ctx.inputs.get_from(
-                "placeholder_classification", "classification"
-            )
+            classification = ctx.inputs.get_from("llm_classification", "classification")
 
-            if not llm_data:
-                llm_data = ctx.inputs.get_from("llm_classification", "classification")
-
-            if not llm_data:
+            if not classification:
                 return StageOutput.fail(
                     error="No classification data from classification stage",
                     data={"stage": self.name},
                 )
 
             email_hash = ctx.inputs.get_from(
-                "placeholder_classification", "email_hash", default="UNKNOWN"
-            )
-            classification = ctx.inputs.get_from(
-                "placeholder_classification", "classification", default="general"
+                "llm_classification", "email_hash", default="UNKNOWN"
             )
             confidence = ctx.inputs.get_from(
-                "placeholder_classification", "confidence", default=0.5
+                "llm_classification", "confidence", default=0.5
             )
             priority = ctx.inputs.get_from(
-                "placeholder_classification", "priority", default="p4_low"
+                "llm_classification", "priority", default="p4_low"
             )
             rationale = ctx.inputs.get_from(
-                "placeholder_classification", "rationale", default=""
+                "llm_classification", "rationale", default=""
             )
             model_name = ctx.inputs.get_from(
-                "placeholder_classification", "model_name", default="placeholder"
+                "llm_classification", "model_name", default="llm"
             )
             model_version = ctx.inputs.get_from(
-                "placeholder_classification", "model_version", default="1.0.0"
+                "llm_classification", "model_version", default="1.0.0"
             )
 
             adjusted_priority = ctx.inputs.get_from(
@@ -167,7 +159,7 @@ class ReadModelWriterStage:
             )
             if not all_risk_tags:
                 all_risk_tags = ctx.inputs.get_from(
-                    "placeholder_classification", "risk_tags", default=[]
+                    "llm_classification", "risk_tags", default=[]
                 )
 
             extracted_actions = []

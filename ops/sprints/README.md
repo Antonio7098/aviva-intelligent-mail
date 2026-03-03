@@ -159,7 +159,7 @@ Production hardening aligned with regulated ops expectations.
 ## Documentation Structure
 
 - High-level roadmap: [ROADMAP.md](../../ROADMAP.md)
-- Architecture details: [ARCHITECTURE.md](../../ARCHITECTURE.md)
+- Architecture details: [ARCHITECTURE.md](../../docs/ARCHITECTURE.md)
 - Sprint template: [SPRINT_TEMPLATE.md](../../SPRINT_TEMPLATE.md)
 - Business docs: [docs/](../../docs/)
 
