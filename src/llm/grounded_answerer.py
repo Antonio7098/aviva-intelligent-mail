@@ -13,6 +13,10 @@ from pydantic import BaseModel
 
 from src.llm.answering import AnswerGenerationError
 from src.llm.client import LLMClient
+from src.llm.prompts import (
+    CURRENT_GROUNDED_ANSWER_VERSION,
+    get_grounded_answer_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,37 +26,6 @@ class GroundedAnswerResponse(BaseModel):
 
     answer: str
     citations: list[str]
-
-
-GROUNDED_ANSWER_SYSTEM_PROMPT = """You are an insurance claims assistant. Your role is to answer questions based ONLY on the provided context.
-
-IMPORTANT RULES:
-1. ONLY use information from the provided context documents
-2. If the context doesn't contain enough information to answer the question, say so explicitly
-3. ALWAYS cite your sources using the email_hash identifiers provided in the context
-4. NEVER make up information or infer details not present in the context
-5. Use a professional, concise tone appropriate for insurance operations
-
-When citing sources, use the format: [email_hash:XXX] where XXX is the email hash from the context.
-
-If you cannot find sufficient evidence in the context, respond with: "No evidence found in the available documents to answer this question."
-"""
-
-
-GROUNDED_ANSWER_USER_PROMPT = """Context (retrieved documents):
-
-{context}
-
----
-
-Question: {question}
-
-Instructions:
-1. Answer the question using ONLY the context above
-2. If the context doesn't contain the answer, say so
-3. Cite all sources using [email_hash:XXX] format
-4. Keep your answer concise and professional
-"""
 
 
 class GroundedAnswerer:
@@ -74,15 +47,21 @@ class GroundedAnswerer:
         self,
         llm_client: LLMClient,
         temperature: float = 0.0,
+        prompt_version: str = CURRENT_GROUNDED_ANSWER_VERSION,
     ):
         """Initialize the grounded answerer.
 
         Args:
             llm_client: LLM client for answer generation
             temperature: Temperature setting for generation
+            prompt_version: Version of prompt template to use
         """
         self._llm_client = llm_client
         self._temperature = temperature
+        self._prompt_version = prompt_version
+        self._system_prompt, self._user_prompt_template = get_grounded_answer_prompt(
+            prompt_version
+        )
 
     async def generate_answer(
         self,
@@ -118,7 +97,7 @@ class GroundedAnswerer:
                 "model_name": self._llm_client.model_name,
             }
 
-        user_prompt = GROUNDED_ANSWER_USER_PROMPT.format(
+        user_prompt = self._user_prompt_template.format(
             context=context,
             question=question,
         )
@@ -126,7 +105,7 @@ class GroundedAnswerer:
         try:
             answer = await self._llm_client.generate(
                 prompt=user_prompt,
-                system_prompt=GROUNDED_ANSWER_SYSTEM_PROMPT,
+                system_prompt=self._system_prompt,
                 temperature=self._temperature,
             )
 

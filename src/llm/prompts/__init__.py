@@ -23,6 +23,7 @@ from typing import Final
 
 CURRENT_CLASSIFICATION_VERSION: Final[str] = "v1.0"
 CURRENT_ACTION_EXTRACTION_VERSION: Final[str] = "v1.0"
+CURRENT_GROUNDED_ANSWER_VERSION: Final[str] = "v1.0"
 
 SECURITY_INSTRUCTIONS = """
 
@@ -186,6 +187,37 @@ Remember:
     + SECURITY_INSTRUCTIONS,
 }
 
+GROUNDED_ANSWER_PROMPTS: dict[str, tuple[str, str]] = {
+    "v1.0": (
+        """You are an insurance claims assistant. Your role is to answer questions based ONLY on the provided context.
+
+IMPORTANT RULES:
+1. ONLY use information from the provided context documents
+2. If the context doesn't contain enough information to answer the question, say so explicitly
+3. ALWAYS cite your sources using the email_hash identifiers provided in the context
+4. NEVER make up information or infer details not present in the context
+5. Use a professional, concise tone appropriate for insurance operations
+
+When citing sources, use the format: [email_hash:XXX] where XXX is the email hash from the context.
+
+If you cannot find sufficient evidence in the context, respond with: "No evidence found in the available documents to answer this question."
+""",
+        """Context (retrieved documents):
+
+{context}
+
+---
+
+Question: {question}
+
+Instructions:
+1. Answer the question using ONLY the context above
+2. If the context doesn't contain the answer, say so
+3. Cite all sources using [email_hash:XXX] format
+4. Keep your answer concise and professional""",
+    ),
+}
+
 
 def get_classification_prompt(version: str = "v1.0") -> str:
     """Get the classification prompt for a specific version.
@@ -225,6 +257,26 @@ def get_action_extraction_prompt(version: str = "v1.0") -> str:
             f"Unknown action extraction prompt version: {version}. Available: {available}"
         )
     return ACTION_EXTRACTION_PROMPTS[version]
+
+
+def get_grounded_answer_prompt(version: str = "v1.0") -> tuple[str, str]:
+    """Get the grounded answer prompts for a specific version.
+
+    Args:
+        version: The prompt version to retrieve
+
+    Returns:
+        Tuple of (system_prompt, user_prompt_template)
+
+    Raises:
+        ValueError: If the requested version doesn't exist
+    """
+    if version not in GROUNDED_ANSWER_PROMPTS:
+        available = ", ".join(GROUNDED_ANSWER_PROMPTS.keys())
+        raise ValueError(
+            f"Unknown grounded answer prompt version: {version}. Available: {available}"
+        )
+    return GROUNDED_ANSWER_PROMPTS[version]
 
 
 def list_available_versions() -> dict[str, list[str]]:
