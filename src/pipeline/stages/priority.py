@@ -54,14 +54,6 @@ class PriorityPolicyStage:
     def audit_emitter(self, emitter: AuditEmitter) -> None:
         self._audit_emitter = emitter
 
-    def _get_email_data(self, ctx) -> dict:
-        """Get email data from redaction stage."""
-        redaction_data = ctx.data.get("minimisation_redaction_data", {})
-        return {
-            "subject": str(redaction_data.get("subject", "")),
-            "body_text": str(redaction_data.get("body_text", "")),
-        }
-
     async def _emit_audit_event(
         self,
         ctx,
@@ -102,21 +94,38 @@ class PriorityPolicyStage:
         try:
             ctx.try_emit_event("priority_policy.started", {"stage": self.name})
 
-            llm_data = ctx.data.get("llm_classification_data", {})
+            classification_data = ctx.inputs.get_from(
+                "placeholder_classification", "classification"
+            )
+            if not classification_data:
+                classification_data = ctx.inputs.get_from(
+                    "llm_classification", "classification"
+                )
 
-            if not llm_data:
+            if not classification_data:
                 return StageOutput.fail(
                     error="No classification data from classification stage",
                     data={"stage": self.name},
                 )
 
-            email_hash = llm_data.get("email_hash", "UNKNOWN")
-            priority_str = llm_data.get("priority", "p4_low")
-            risk_tags = llm_data.get("risk_tags", [])
+            email_hash = ctx.inputs.get_from(
+                "placeholder_classification", "email_hash", default="UNKNOWN"
+            )
+            priority_str = ctx.inputs.get_from(
+                "placeholder_classification", "priority", default="p4_low"
+            )
+            risk_tags = ctx.inputs.get_from(
+                "placeholder_classification", "risk_tags", default=[]
+            )
 
-            email_data = self._get_email_data(ctx)
-            subject = email_data.get("subject", "")
-            body_text = email_data.get("body_text", "")
+            subject = (
+                ctx.inputs.get_from("minimisation_redaction", "subject", default="")
+                or ""
+            )
+            body_text = (
+                ctx.inputs.get_from("minimisation_redaction", "body_text", default="")
+                or ""
+            )
 
             original_priority = Priority(priority_str)
 
@@ -136,16 +145,6 @@ class PriorityPolicyStage:
             ]
             all_tags = existing_tags + added_tags
             unique_tags = list({t.value: t for t in all_tags}.values())
-
-            ctx.data["priority_policy_data"] = {
-                "email_hash": email_hash,
-                "original_priority": original_priority.value,
-                "adjusted_priority": adjusted_priority.value,
-                "adjustment_reason": adjustment_reason,
-                "added_risk_tags": [t.value for t in added_tags],
-                "all_risk_tags": [t.value for t in unique_tags],
-                "ruleset_version": RULESET_VERSION,
-            }
 
             await self._emit_audit_event(
                 ctx,

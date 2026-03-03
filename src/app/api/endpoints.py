@@ -1,10 +1,11 @@
 """API endpoints for the Aviva Claims Mail Intelligence application."""
 
+import json
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
-from dataclasses import dataclass
 
+import stageflow
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -13,12 +14,8 @@ from src.app.logging_config import get_logger
 from src.audit.postgres_sink import PostgresAuditSink
 from src.audit.sink import AuditSink
 from src.domain.digest import DailyDigest
-from src.domain.triage import (
-    Priority,
-)
+from src.pipeline.graph import create_email_pipeline
 from src.pipeline.stages.audit_emitter import AuditEmitter
-from src.policy.default_policy import DefaultPriorityPolicy
-from src.policy.priority import PriorityPolicy
 from src.privacy.event_sanitizer import EventSanitizer
 from src.store.digests import DigestWriter
 from src.store.postgres_db import PostgresDatabase
@@ -29,7 +26,6 @@ router = APIRouter()
 
 _db_instance: Optional[PostgresDatabase] = None
 _audit_sink: Optional[AuditSink] = None
-_priority_policy: Optional[PriorityPolicy] = None
 
 
 async def get_db() -> PostgresDatabase:
@@ -48,14 +44,6 @@ async def get_audit_sink() -> AuditSink:
         db = await get_db()
         _audit_sink = PostgresAuditSink(db, EventSanitizer(safe_mode=False))
     return _audit_sink
-
-
-async def get_priority_policy() -> PriorityPolicy:
-    """Get priority policy instance."""
-    global _priority_policy
-    if _priority_policy is None:
-        _priority_policy = DefaultPriorityPolicy()
-    return _priority_policy
 
 
 class EmailRecordInput(BaseModel):
@@ -127,27 +115,101 @@ class DigestResponse(BaseModel):
     total_processed: int
 
 
+def _extract_decision_from_pipeline_results(
+    results: dict, email_id: str
+) -> Optional[dict]:
+    """Extract decision data from pipeline stage results.
+
+    Args:
+        results: Dictionary of stage results from pipeline
+        email_id: Email identifier for error reporting
+
+    Returns:
+        Decision dictionary or None if processing failed
+    """
+    logger.debug(
+        "Pipeline results keys",
+        extra={"email_id": email_id, "keys": list(results.keys())},
+    )
+
+    priority_policy_result = results.get("priority_policy")
+    if (
+        not priority_policy_result
+        or priority_policy_result.status != stageflow.StageStatus.OK
+    ):
+        logger.warning(
+            "Priority policy stage failed",
+            extra={
+                "email_id": email_id,
+                "status": priority_policy_result.status
+                if priority_policy_result
+                else None,
+                "data": priority_policy_result.data if priority_policy_result else None,
+            },
+        )
+        return None
+
+    data = priority_policy_result.data or {}
+
+    classification_result = results.get("placeholder_classification") or results.get(
+        "llm_classification"
+    )
+    if (
+        classification_result
+        and classification_result.status == stageflow.StageStatus.OK
+    ):
+        classification = classification_result.data.get("classification", "general")
+        confidence = classification_result.data.get("confidence", 0.5)
+        model_name = classification_result.data.get("model_name", "placeholder")
+        model_version = classification_result.data.get("model_version", "1.0.0")
+    else:
+        classification = "general"
+        confidence = 0.5
+        model_name = "placeholder"
+        model_version = "1.0.0"
+
+    classification_rationale = ""
+    if (
+        classification_result
+        and classification_result.status == stageflow.StageStatus.OK
+    ):
+        classification_rationale = classification_result.data.get(
+            "rationale", f"Classified as {classification}"
+        )
+
+    return {
+        "email_hash": data.get("email_hash", ""),
+        "classification": classification,
+        "confidence": confidence,
+        "priority": data.get("original_priority", "p4_low"),
+        "adjusted_priority": data.get("adjusted_priority", "p4_low"),
+        "adjustment_reason": data.get("adjustment_reason", ""),
+        "risk_tags": data.get("all_risk_tags", []),
+        "rationale": classification_rationale,
+        "model_name": model_name,
+        "model_version": model_version,
+        "processed_at": datetime.now(timezone.utc),
+    }
+
+
 @router.post("/process", response_model=ProcessResponse)
 async def process_emails(
     request: ProcessRequest,
     db: PostgresDatabase = Depends(get_db),
     audit_sink: AuditSink = Depends(get_audit_sink),
-    priority_policy: PriorityPolicy = Depends(get_priority_policy),
 ):
     """Process a batch of emails and return triage decisions with digest.
 
     This endpoint:
     1. Accepts a list of emails
-    2. Runs the classification pipeline
-    3. Applies priority policy rules
-    4. Builds a digest summary
-    5. Returns decisions and digest
+    2. Runs the full Stageflow pipeline (includes redaction, classification, priority policy)
+    3. Builds a digest summary
+    4. Returns decisions and digest
 
     Args:
         request: The processing request with emails
         db: Database dependency
         audit_sink: Audit sink dependency
-        priority_policy: Priority policy dependency
 
     Returns:
         ProcessResponse with decisions and digest
@@ -162,51 +224,81 @@ async def process_emails(
     )
     audit_emitter = AuditEmitter(audit_sink=audit_sink)
 
+    graph = create_email_pipeline(
+        database=db,
+        audit_emitter=audit_emitter,
+        use_llm=False,
+    )
+
     decisions_output: list[TriageDecisionOutput] = []
     batch_decisions: list[dict] = []
 
     for email_input in request.emails:
         try:
-            classification = _classify_email_simple(email_input)
-            (
-                adjusted_priority,
-                adjustment_reason,
-                added_tags,
-            ) = priority_policy.adjust_priority(
-                Priority(classification.priority),
-                classification.risk_tags,
-                email_input.subject,
-                email_input.body_text or "",
+            email_json = json.dumps(
+                {
+                    "email_id": email_input.email_id,
+                    "subject": email_input.subject,
+                    "sender": email_input.sender,
+                    "recipient": email_input.recipient,
+                    "received_at": email_input.received_at.isoformat(),
+                    "body_text": email_input.body_text,
+                    "body_html": email_input.body_html,
+                    "attachments": email_input.attachments,
+                    "thread_id": email_input.thread_id,
+                }
             )
 
-            all_tags = list(set(classification.risk_tags + added_tags))
-
-            email_hash = f"hash_{email_input.email_id}"
-
-            decision = TriageDecisionOutput(
-                email_hash=email_hash,
-                classification=classification.classification,
-                confidence=classification.confidence,
-                priority=classification.priority,
-                adjusted_priority=adjusted_priority,
-                adjustment_reason=adjustment_reason,
-                risk_tags=all_tags,
-                rationale=classification.rationale,
-                model_name="placeholder",
-                model_version="1.0.0",
-                processed_at=datetime.now(timezone.utc),
+            pipeline_ctx = stageflow.PipelineContext(
+                pipeline_run_id=correlation_id,
+                request_id=uuid4(),
+                session_id=uuid4(),
+                user_id=uuid4(),
+                org_id=None,
+                interaction_id=uuid4(),
+                input_text=email_json,
+                topology="pipeline",
+                execution_mode="production",
+                metadata={"handler_id": request.handler_id},
             )
+
+            results = await graph.run(pipeline_ctx)
+
+            decision_data = _extract_decision_from_pipeline_results(
+                results, email_input.email_id
+            )
+
+            if decision_data is None:
+                logger.warning(
+                    "Pipeline processing failed for email, using fallback",
+                    extra={"email_id": email_input.email_id},
+                )
+                decision_data = {
+                    "email_hash": f"fallback_{email_input.email_id}",
+                    "classification": "general",
+                    "confidence": 0.0,
+                    "priority": "p4_low",
+                    "adjusted_priority": "p4_low",
+                    "adjustment_reason": "Pipeline failed, using fallback",
+                    "risk_tags": [],
+                    "rationale": "Pipeline failed, using fallback",
+                    "model_name": "fallback",
+                    "model_version": "1.0.0",
+                    "processed_at": datetime.now(timezone.utc),
+                }
+
+            decision = TriageDecisionOutput(**decision_data)
             decisions_output.append(decision)
 
             batch_decisions.append(
                 {
-                    "email_hash": email_hash,
-                    "subject": email_input.subject,
-                    "classification": classification.classification,
-                    "priority": classification.priority,
-                    "adjusted_priority": adjusted_priority,
+                    "email_hash": decision.email_hash,
+                    "subject": decision_data.get("subject", ""),
+                    "classification": decision.classification,
+                    "priority": decision.priority,
+                    "adjusted_priority": decision.adjusted_priority,
                     "actions": [],
-                    "risk_tags": all_tags,
+                    "risk_tags": decision.risk_tags,
                 }
             )
 
@@ -334,62 +426,4 @@ async def get_digest(
         actionable_emails=[a.model_dump() for a in digest.actionable_emails],
         model_version=digest.model_version,
         total_processed=digest.total_processed,
-    )
-
-
-@dataclass
-class SimpleClassification:
-    classification: str
-    priority: str
-    confidence: float
-    risk_tags: list[str]
-    rationale: str
-
-
-def _classify_email_simple(email: EmailRecordInput) -> SimpleClassification:
-    """Simple classification for API (placeholder for real LLM)."""
-    body_lower = (email.body_text or "").lower()
-    subject_lower = email.subject.lower()
-
-    if "claim" in body_lower or "claim" in subject_lower:
-        if "update" in body_lower or "status" in body_lower:
-            classification = "claim_update"
-        else:
-            classification = "new_claim"
-    elif "complaint" in body_lower or "unhappy" in body_lower:
-        classification = "complaint"
-    elif "cancel" in body_lower:
-        classification = "cancellation"
-    elif "renew" in body_lower:
-        classification = "renewal"
-    elif "policy" in body_lower or "coverage" in body_lower:
-        classification = "policy_inquiry"
-    else:
-        classification = "general"
-
-    if "urgent" in body_lower or "asap" in body_lower or "emergency" in body_lower:
-        priority = "p1_critical"
-        confidence = 0.9
-    elif "important" in body_lower or "priority" in body_lower:
-        priority = "p2_high"
-        confidence = 0.75
-    elif "question" in body_lower or "info" in body_lower:
-        priority = "p4_low"
-        confidence = 0.6
-    else:
-        priority = "p3_medium"
-        confidence = 0.7
-
-    risk_tags = []
-    if "high value" in body_lower or "$" in body_lower:
-        risk_tags.append("high_value")
-    if "legal" in body_lower or "solicitor" in body_lower:
-        risk_tags.append("legal")
-
-    return SimpleClassification(
-        classification=classification,
-        priority=priority,
-        confidence=confidence,
-        risk_tags=risk_tags,
-        rationale=f"Classified as {classification} with priority {priority}",
     )

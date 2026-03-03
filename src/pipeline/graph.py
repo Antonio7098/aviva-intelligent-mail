@@ -8,8 +8,7 @@ import os
 from typing import Optional
 
 from stageflow import Pipeline, StageKind
-from stageflow.pipeline.interceptors import get_default_interceptors
-from stageflow.pipeline.dag import StageGraph
+from stageflow.pipeline.dag import UnifiedStageGraph
 
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.pipeline.stages.classification import LLMClassificationStage
@@ -33,7 +32,7 @@ def create_email_pipeline(
     pii_redactor: Optional[PIIRedactor] = None,
     llm_client: Optional[LLMClient] = None,
     use_llm: bool = True,
-) -> StageGraph:
+) -> UnifiedStageGraph:
     """Create the email processing pipeline.
 
     DAG:
@@ -115,7 +114,7 @@ def create_email_pipeline(
                 "priority_policy",
                 priority_stage,
                 StageKind.ENRICH,
-                dependencies=("llm_classification",),
+                dependencies=("llm_classification", "minimisation_redaction"),
             )
             .with_stage(
                 "action_extraction",
@@ -127,7 +126,12 @@ def create_email_pipeline(
                 "read_model_writer",
                 persistence_stage,
                 StageKind.WORK,
-                dependencies=("action_extraction",),
+                dependencies=(
+                    "action_extraction",
+                    "priority_policy",
+                    "llm_classification",
+                    "minimisation_redaction",
+                ),
             )
         )
         stage_count = 6
@@ -151,29 +155,29 @@ def create_email_pipeline(
                 "priority_policy",
                 priority_stage,
                 StageKind.ENRICH,
-                dependencies=("placeholder_classification",),
+                dependencies=("placeholder_classification", "minimisation_redaction"),
             )
             .with_stage(
                 "read_model_writer",
                 persistence_stage,
                 StageKind.WORK,
-                dependencies=("priority_policy",),
+                dependencies=(
+                    "priority_policy",
+                    "placeholder_classification",
+                    "minimisation_redaction",
+                ),
             )
         )
         stage_count = 5
 
-    interceptors = get_default_interceptors()
-
-    graph = StageGraph(
+    graph = UnifiedStageGraph(
         specs=pipeline.build().stage_specs,  # type: ignore[arg-type]
-        interceptors=interceptors,
     )
 
     logger.info(
-        "Email pipeline created",
+        "Email pipeline created (UnifiedStageGraph)",
         extra={
             "stages": stage_count,
-            "interceptors": len(interceptors),
             "use_llm": use_llm,
         },
     )

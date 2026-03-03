@@ -179,24 +179,11 @@ class EmailIngestionStage:
             logger.info(
                 "Email ingested",
                 extra={
-                    "email_id": email.email_id,
                     "email_hash": email_hash,
+                    "email_id": email.email_id,
                     "stage": self.name,
                 },
             )
-
-            ctx.data["email_ingestion_data"] = {
-                "email_id": email.email_id,
-                "email_hash": email_hash,
-                "subject": email.subject,
-                "sender": email.sender,
-                "recipient": email.recipient,
-                "received_at": email.received_at.isoformat(),
-                "body_text": email.body_text,
-                "body_html": email.body_html,
-                "attachments": email.attachments,
-                "thread_id": email.thread_id,
-            }
 
             return StageOutput.ok(
                 email_id=email.email_id,

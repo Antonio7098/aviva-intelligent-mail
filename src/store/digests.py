@@ -16,14 +16,10 @@ class DigestWriter:
             summary_counts, priority_breakdown, top_priorities,
             actionable_emails, model_version, total_processed
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (correlation_id) DO UPDATE SET
-            generated_at = EXCLUDED.generated_at,
-            summary_counts = EXCLUDED.summary_counts,
-            priority_breakdown = EXCLUDED.priority_breakdown,
-            top_priorities = EXCLUDED.top_priorities,
-            actionable_emails = EXCLUDED.actionable_emails,
-            model_version = EXCLUDED.model_version,
-            total_processed = EXCLUDED.total_processed
+    """
+
+    CHECK_EXISTS_QUERY = """
+        SELECT 1 FROM digest_runs WHERE correlation_id = $1
     """
 
     def __init__(self, database: Database):
@@ -34,7 +30,20 @@ class DigestWriter:
 
         Args:
             digest: The daily digest to write
+
+        Raises:
+            ValueError: If a digest with the same correlation_id already exists
         """
+        existing = await self._database.fetch_one(
+            self.CHECK_EXISTS_QUERY,
+            [str(digest.correlation_id)],
+        )
+        if existing:
+            raise ValueError(
+                f"Digest with correlation_id {digest.correlation_id} already exists. "
+                "Digest writes are append-only."
+            )
+
         await self._database.execute(
             self.INSERT_QUERY,
             [

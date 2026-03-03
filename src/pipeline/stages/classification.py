@@ -69,7 +69,23 @@ class LLMClassificationStage:
         """Create RedactedEmail from stage context."""
         from src.domain.email import create_redacted_email_from_data
 
-        redaction_data = ctx.data.get("minimisation_redaction_data", {})
+        redaction_data = {
+            "email_hash": ctx.inputs.get_from(
+                "minimisation_redaction", "email_hash", default=""
+            ),
+            "subject": ctx.inputs.get_from(
+                "minimisation_redaction", "subject", default=""
+            ),
+            "body_text": ctx.inputs.get_from(
+                "minimisation_redaction", "body_text", default=""
+            ),
+            "sender": ctx.inputs.get_from(
+                "minimisation_redaction", "sender", default=""
+            ),
+            "recipient": ctx.inputs.get_from(
+                "minimisation_redaction", "recipient", default=""
+            ),
+        }
         return create_redacted_email_from_data(redaction_data)
 
     async def execute(self, ctx) -> StageOutput:
