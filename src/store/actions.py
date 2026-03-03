@@ -41,7 +41,12 @@ class ActionWriter:
                 action.notes,
             ],
         )
-        return UUID(result["id"]) if result else UUID(int=0)
+        if result:
+            id_value = result["id"]
+            if isinstance(id_value, str):
+                return UUID(id_value)
+            return UUID(str(id_value))
+        return UUID(int=0)
 
     async def write_actions(
         self, email_hash: str, actions: list[RequiredAction]

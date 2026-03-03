@@ -21,6 +21,7 @@ class TestEventSanitizer:
             stage="test",
             actor=None,
             model_name=None,
+            model_version=None,
             prompt_version=None,
             ruleset_version=None,
             status="success",

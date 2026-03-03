@@ -22,40 +22,6 @@ pip-audit
 
 ### 2. Review Changes
 
-```bash
-# View staged changes
-git diff --cached
-
-# View unstaged changes
-git diff
-
-# View diff against main branch
-git diff main..HEAD
-```
-
-Review all changes carefully - understand what was modified, added, or deleted.
-
-### 3. Update Changelog
-
-Add an entry to `changelog.json` following the format:
-
-```json
-{
-  "version": "v0.0.1",
-  "date": "YYYY-MM-DD",
-  "sprint": "Sprint N",
-  "changes": [
-    {
-      "type": "added|changed|fixed|removed",
-      "area": "module or feature area",
-      "description": "Brief description of the change"
-    }
-  ]
-}
-```
-
----
-
 ## Opening a Pull Request
 
 ### 1. Create Branch (if not already)
@@ -116,7 +82,6 @@ Brief description of what this PR does
 - [ ] Code follows SOLID principles
 - [ ] Privacy checks passed
 - [ ] Documentation updated
-- [ ] Changelog updated
 
 ## Screenshots (if UI changes)
 ```
