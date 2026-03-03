@@ -188,34 +188,7 @@ Remember:
 }
 
 GROUNDED_ANSWER_PROMPTS: dict[str, tuple[str, str]] = {
-    "v1.0": (
-        """You are an insurance claims assistant. Your role is to answer questions based ONLY on the provided context.
-
-IMPORTANT RULES:
-1. ONLY use information from the provided context documents
-2. If the context doesn't contain enough information to answer the question, say so explicitly
-3. ALWAYS cite your sources using the email_hash identifiers provided in the context
-4. NEVER make up information or infer details not present in the context
-5. Use a professional, concise tone appropriate for insurance operations
-
-When citing sources, use the format: [email_hash:XXX] where XXX is the email hash from the context.
-
-If you cannot find sufficient evidence in the context, respond with: "No evidence found in the available documents to answer this question."
-""",
-        """Context (retrieved documents):
-
-{context}
-
----
-
-Question: {question}
-
-Instructions:
-1. Answer the question using ONLY the context above
-2. If the context doesn't contain the answer, say so
-3. Cite all sources using [email_hash:XXX] format
-4. Keep your answer concise and professional""",
-    ),
+    "v1.0": ("grounded_answer_v1_system.txt", "grounded_answer_v1_user.txt"),
 }
 
 
@@ -276,7 +249,16 @@ def get_grounded_answer_prompt(version: str = "v1.0") -> tuple[str, str]:
         raise ValueError(
             f"Unknown grounded answer prompt version: {version}. Available: {available}"
         )
-    return GROUNDED_ANSWER_PROMPTS[version]
+
+    system_prompt_file, user_prompt_file = GROUNDED_ANSWER_PROMPTS[version]
+
+    from pathlib import Path
+
+    current_dir = Path(__file__).parent
+    system_prompt = (current_dir / system_prompt_file).read_text()
+    user_prompt_template = (current_dir / user_prompt_file).read_text()
+
+    return system_prompt, user_prompt_template
 
 
 def list_available_versions() -> dict[str, list[str]]:
@@ -288,4 +270,5 @@ def list_available_versions() -> dict[str, list[str]]:
     return {
         "classification": list(CLASSIFICATION_PROMPTS.keys()),
         "action_extraction": list(ACTION_EXTRACTION_PROMPTS.keys()),
+        "grounded_answer": list(GROUNDED_ANSWER_PROMPTS.keys()),
     }
