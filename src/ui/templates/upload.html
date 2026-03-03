@@ -24,6 +24,25 @@
         <div class="container">
             <h1>Upload Emails</h1>
 
+            <div class="status-summary" id="statusSummary" style="display: none;">
+                <div class="status-box pending">
+                    <span class="count" id="countPending">0</span>
+                    <span class="label">Pending</span>
+                </div>
+                <div class="status-box processing">
+                    <span class="count" id="countProcessing">0</span>
+                    <span class="label">Processing</span>
+                </div>
+                <div class="status-box completed">
+                    <span class="count" id="countCompleted">0</span>
+                    <span class="label">Completed</span>
+                </div>
+                <div class="status-box failed">
+                    <span class="count" id="countFailed">0</span>
+                    <span class="label">Failed</span>
+                </div>
+            </div>
+
             <div class="upload-section">
                 <p>Paste JSON email data in the text area below. The JSON should follow this format:</p>
 
@@ -71,6 +90,11 @@
                     <div id="resultContent"></div>
                 </div>
             </div>
+
+            <div id="currentJobSection" class="current-job-section" style="display: none;">
+                <h2>Current Processing</h2>
+                <div id="currentJobContent"></div>
+            </div>
         </div>
     </main>
 
@@ -79,6 +103,63 @@
     </footer>
 
     <script>
+        let statusInterval;
+
+        function updateStatus() {
+            fetch('/api/v1/jobs')
+                .then(response => response.json())
+                .then(jobs => {
+                    const counts = { pending: 0, processing: 0, completed: 0, failed: 0 };
+                    let latestJob = null;
+
+                    jobs.forEach(job => {
+                        const status = job.status || 'pending';
+                        counts[status] = (counts[status] || 0) + 1;
+                        if (!latestJob || new Date(job.created_at) > new Date(latestJob.created_at)) {
+                            latestJob = job;
+                        }
+                    });
+
+                    document.getElementById('statusSummary').style.display = 'flex';
+                    document.getElementById('countPending').textContent = counts.pending || 0;
+                    document.getElementById('countProcessing').textContent = counts.processing || 0;
+                    document.getElementById('countCompleted').textContent = counts.completed || 0;
+                    document.getElementById('countFailed').textContent = counts.failed || 0;
+
+                    if (latestJob && latestJob.status === 'processing') {
+                        const currentJobSection = document.getElementById('currentJobSection');
+                        const currentJobContent = document.getElementById('currentJobContent');
+
+                        let stagesHtml = '';
+                        if (latestJob.stages && latestJob.stages.length > 0) {
+                            stagesHtml = '<div class="stages-list"><h4>Pipeline Stages:</h4><ul>';
+                            latestJob.stages.forEach(stage => {
+                                const stageStatus = stage.status === 'success' ? '✓' : (stage.status === 'failed' ? '✗' : '⟳');
+                                stagesHtml += `<li><span class="stage-status">${stageStatus}</span> ${stage.stage || stage.event_type}: ${stage.status}</li>`;
+                            });
+                            stagesHtml += '</ul></div>';
+                        }
+
+                        currentJobContent.innerHTML = `
+                            <div class="job-card processing">
+                                <div class="job-header">
+                                    <span class="job-id">${latestJob.correlation_id}</span>
+                                    <span class="status-badge status-processing">Processing</span>
+                                </div>
+                                <div class="job-progress">
+                                    <p><strong>Total Processed:</strong> ${latestJob.total_processed}</p>
+                                    ${stagesHtml}
+                                </div>
+                            </div>
+                        `;
+                        currentJobSection.style.display = 'block';
+                    } else {
+                        document.getElementById('currentJobSection').style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Error fetching status:', error));
+        }
+
         document.getElementById('validateBtn').addEventListener('click', function() {
             const jsonInput = document.getElementById('emailsJson').value;
             const resultDiv = document.getElementById('validationResult');
@@ -116,10 +197,9 @@
                 if (response.ok) {
                     resultContent.innerHTML = `
                         <div class="success-box">
-                            <h3>✓ Processing Complete</h3>
+                            <h3>✓ Processing Started</h3>
                             <p><strong>Correlation ID:</strong> ${result.correlation_id}</p>
-                            <p><strong>Total Processed:</strong> ${result.total_processed}</p>
-                            <p><strong>Handler ID:</strong> ${result.handler_id}</p>
+                            <p><strong>Total to Process:</strong> ${result.total_processed}</p>
                             <a href="/results/${result.correlation_id}" class="btn btn-primary">View Results</a>
                         </div>
                     `;
@@ -143,6 +223,9 @@
                 resultSection.style.display = 'block';
             }
         });
+
+        updateStatus();
+        statusInterval = setInterval(updateStatus, 3000);
     </script>
 </body>
 </html>

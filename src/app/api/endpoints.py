@@ -62,6 +62,33 @@ class EmailRecordInput(BaseModel):
     thread_id: Optional[str] = Field(None, description="Email thread identifier")
 
 
+class MessageInput(BaseModel):
+    """Input model for message in emails_candidate.json format."""
+
+    body: Optional[str] = None
+    subject: str
+    sent_from: str
+    sent_to: list[str] = Field(default_factory=list)
+    sent_cc: list[str] = Field(default_factory=list)
+    date_sent: str
+    attachments: Optional[list[dict]] = Field(default_factory=list)
+    importance_flag: Optional[str] = None
+    message_id: Optional[str] = None
+    thread_id: Optional[str] = None
+
+
+class EmailThreadInput(BaseModel):
+    """Input model for email thread in emails_candidate.json format."""
+
+    messages: list[MessageInput]
+
+
+class EmailsCandidateInput(BaseModel):
+    """Input model for emails_candidate.json format."""
+
+    emails: list[EmailThreadInput]
+
+
 class ProcessRequest(BaseModel):
     """Request body for POST /process endpoint."""
 
@@ -194,34 +221,53 @@ def _extract_decision_from_pipeline_results(
 
 @router.post("/process", response_model=ProcessResponse)
 async def process_emails(
-    request: ProcessRequest,
+    request: EmailsCandidateInput,
     db: PostgresDatabase = Depends(get_db),
     audit_sink: AuditSink = Depends(get_audit_sink),
 ):
     """Process a batch of emails and return triage decisions with digest.
 
     This endpoint:
-    1. Accepts a list of emails
+    1. Accepts emails in emails_candidate.json format
     2. Runs the full Stageflow pipeline (includes redaction, classification, priority policy)
     3. Builds a digest summary
     4. Returns decisions and digest
 
     Args:
-        request: The processing request with emails
+        request: The processing request with emails in candidate format
         db: Database dependency
         audit_sink: Audit sink dependency
 
     Returns:
         ProcessResponse with decisions and digest
     """
+    emails_to_process = []
+    for thread in request.emails:
+        for msg in thread.messages:
+            emails_to_process.append(
+                {
+                    "email_id": msg.message_id or f"msg_{uuid4()}",
+                    "subject": msg.subject,
+                    "sender": msg.sent_from,
+                    "recipient": msg.sent_to[0] if msg.sent_to else "",
+                    "received_at": msg.date_sent,
+                    "body_text": msg.body,
+                    "body_html": None,
+                    "attachments": [
+                        a.get("filename", "") for a in (msg.attachments or [])
+                    ],
+                    "thread_id": msg.thread_id,
+                }
+            )
+
+    handler_id = "default_handler"
+    correlation_id = uuid4()
+
     logger.info(
         "Processing email batch",
-        extra={"email_count": len(request.emails), "handler_id": request.handler_id},
+        extra={"email_count": len(emails_to_process), "handler_id": handler_id},
     )
 
-    correlation_id = (
-        uuid4() if not request.correlation_id else UUID(request.correlation_id)
-    )
     audit_emitter = AuditEmitter(audit_sink=audit_sink)
 
     graph = create_email_pipeline(
@@ -233,19 +279,19 @@ async def process_emails(
     decisions_output: list[TriageDecisionOutput] = []
     batch_decisions: list[dict] = []
 
-    for email_input in request.emails:
+    for email_input in emails_to_process:
         try:
             email_json = json.dumps(
                 {
-                    "email_id": email_input.email_id,
-                    "subject": email_input.subject,
-                    "sender": email_input.sender,
-                    "recipient": email_input.recipient,
-                    "received_at": email_input.received_at.isoformat(),
-                    "body_text": email_input.body_text,
-                    "body_html": email_input.body_html,
-                    "attachments": email_input.attachments,
-                    "thread_id": email_input.thread_id,
+                    "email_id": email_input["email_id"],
+                    "subject": email_input["subject"],
+                    "sender": email_input["sender"],
+                    "recipient": email_input["recipient"],
+                    "received_at": email_input["received_at"],
+                    "body_text": email_input["body_text"],
+                    "body_html": email_input["body_html"],
+                    "attachments": email_input["attachments"],
+                    "thread_id": email_input["thread_id"],
                 }
             )
 
@@ -259,22 +305,22 @@ async def process_emails(
                 input_text=email_json,
                 topology="pipeline",
                 execution_mode="production",
-                metadata={"handler_id": request.handler_id},
+                metadata={"handler_id": handler_id},
             )
 
             results = await graph.run(pipeline_ctx)
 
             decision_data = _extract_decision_from_pipeline_results(
-                results, email_input.email_id
+                results, email_input["email_id"]
             )
 
             if decision_data is None:
                 logger.warning(
                     "Pipeline processing failed for email, using fallback",
-                    extra={"email_id": email_input.email_id},
+                    extra={"email_id": email_input["email_id"]},
                 )
                 decision_data = {
-                    "email_hash": f"fallback_{email_input.email_id}",
+                    "email_hash": f"fallback_{email_input['email_id']}",
                     "classification": "general",
                     "confidence": 0.0,
                     "priority": "p4_low",
@@ -305,14 +351,14 @@ async def process_emails(
         except Exception as e:
             logger.error(
                 "Error processing email",
-                extra={"email_id": email_input.email_id, "error": str(e)},
+                extra={"email_id": email_input["email_id"], "error": str(e)},
             )
             raise HTTPException(status_code=500, detail=f"Error processing email: {e}")
 
     digest_writer = DigestWriter(db)
     digest = DailyDigest(
         correlation_id=correlation_id,
-        handler_id=request.handler_id,
+        handler_id=handler_id,
         digest_date=datetime.now(timezone.utc),
         generated_at=datetime.now(timezone.utc),
         model_version="1.0.0",
@@ -379,14 +425,14 @@ async def process_emails(
         stage="api",
         status="success",
         payload={
-            "handler_id": request.handler_id,
+            "handler_id": handler_id,
             "total_processed": len(decisions_output),
         },
     )
 
     return ProcessResponse(
         correlation_id=str(correlation_id),
-        handler_id=request.handler_id,
+        handler_id=handler_id,
         total_processed=len(decisions_output),
         decisions=decisions_output,
         digest=digest.model_dump() if digest else None,
@@ -573,6 +619,7 @@ class JobStatusResponse(BaseModel):
     total_processed: int
     error_message: Optional[str] = None
     created_at: datetime
+    stages: list[dict] = Field(default_factory=list)
 
 
 @router.get("/jobs", response_model=list[JobStatusResponse])
@@ -602,14 +649,30 @@ async def get_jobs(
         logger.warning(f"Error fetching jobs: {e}")
         jobs = []
 
-    return [
-        JobStatusResponse(
-            correlation_id=str(j["correlation_id"]),
-            handler_id=j["handler_id"],
-            status=j["status"],
-            total_processed=j["total_processed"],
-            error_message=j.get("error_message"),
-            created_at=j["created_at"],
+    result = []
+    for j in jobs:
+        stages_query = """
+            SELECT stage, event_type, status, timestamp
+            FROM audit_events
+            WHERE correlation_id = $1
+            ORDER BY timestamp ASC
+        """
+        try:
+            stage_rows = await db.fetch_all(stages_query, [str(j["correlation_id"])])
+            stages = [dict(row) for row in stage_rows]
+        except Exception:
+            stages = []
+
+        result.append(
+            JobStatusResponse(
+                correlation_id=str(j["correlation_id"]),
+                handler_id=j["handler_id"],
+                status=j["status"],
+                total_processed=j["total_processed"],
+                error_message=j.get("error_message"),
+                created_at=j["created_at"],
+                stages=stages,
+            )
         )
-        for j in jobs
-    ]
+
+    return result
