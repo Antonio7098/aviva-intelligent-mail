@@ -12,6 +12,7 @@ from src.domain.triage import (
     Classification,
     Priority,
     RequiredAction,
+    RiskTag,
     TriageDecision,
 )
 from src.pipeline.stages.audit_emitter import AuditEmitter
@@ -66,8 +67,8 @@ class ReadModelWriterStage:
         if not self._audit_emitter:
             return
 
-        email_hash = ctx.data.get("llm_classification_data", {}).get(
-            "email_hash", "ERROR_NO_EMAIL_HASH"
+        email_hash = ctx.inputs.get_from(
+            "placeholder_classification", "email_hash", default="UNKNOWN"
         )
 
         await self._audit_emitter.emit(
@@ -120,7 +121,12 @@ class ReadModelWriterStage:
             StageOutput with write confirmation
         """
         try:
-            llm_data = ctx.data.get("llm_classification_data", {})
+            llm_data = ctx.inputs.get_from(
+                "placeholder_classification", "classification"
+            )
+
+            if not llm_data:
+                llm_data = ctx.inputs.get_from("llm_classification", "classification")
 
             if not llm_data:
                 return StageOutput.fail(
@@ -128,16 +134,49 @@ class ReadModelWriterStage:
                     data={"stage": self.name},
                 )
 
-            email_hash = llm_data.get("email_hash")
-            classification = llm_data.get("classification")
-            confidence = llm_data.get("confidence")
-            priority = llm_data.get("priority")
-            rationale = llm_data.get("rationale")
-            model_name = llm_data.get("model_name")
-            model_version = llm_data.get("model_version")
+            email_hash = ctx.inputs.get_from(
+                "placeholder_classification", "email_hash", default="UNKNOWN"
+            )
+            classification = ctx.inputs.get_from(
+                "placeholder_classification", "classification", default="general"
+            )
+            confidence = ctx.inputs.get_from(
+                "placeholder_classification", "confidence", default=0.5
+            )
+            priority = ctx.inputs.get_from(
+                "placeholder_classification", "priority", default="p4_low"
+            )
+            rationale = ctx.inputs.get_from(
+                "placeholder_classification", "rationale", default=""
+            )
+            model_name = ctx.inputs.get_from(
+                "placeholder_classification", "model_name", default="placeholder"
+            )
+            model_version = ctx.inputs.get_from(
+                "placeholder_classification", "model_version", default="1.0.0"
+            )
 
-            action_data = ctx.data.get("action_extraction_data", {})
-            extracted_actions = action_data.get("actions", [])
+            adjusted_priority = ctx.inputs.get_from(
+                "priority_policy", "adjusted_priority", default=priority
+            )
+            adjustment_reason = ctx.inputs.get_from(
+                "priority_policy", "adjustment_reason", default=""
+            )
+            all_risk_tags = ctx.inputs.get_from(
+                "priority_policy", "all_risk_tags", default=[]
+            )
+            if not all_risk_tags:
+                all_risk_tags = ctx.inputs.get_from(
+                    "placeholder_classification", "risk_tags", default=[]
+                )
+
+            extracted_actions = []
+            try:
+                extracted_actions = ctx.inputs.get_from(
+                    "action_extraction", "actions", default=[]
+                )
+            except Exception:
+                pass
 
             required_actions = []
             for action_item in extracted_actions:
@@ -151,13 +190,20 @@ class ReadModelWriterStage:
                     )
                 )
 
+            risk_tags_list = []
+            for rt in all_risk_tags:
+                try:
+                    risk_tags_list.append(RiskTag(rt))
+                except ValueError:
+                    pass
+
             decision = TriageDecision(
                 email_hash=email_hash,
                 classification=Classification(classification),
                 confidence=confidence,
-                priority=Priority(priority),
+                priority=Priority(adjusted_priority),
                 required_actions=required_actions,
-                risk_tags=[],
+                risk_tags=risk_tags_list,
                 rationale=rationale,
                 model_name=model_name,
                 model_version=model_version,
@@ -181,7 +227,10 @@ class ReadModelWriterStage:
                         "decision_written": True,
                         "actions_written": len(required_actions),
                         "classification": classification,
-                        "priority": priority,
+                        "original_priority": priority,
+                        "adjusted_priority": adjusted_priority,
+                        "adjustment_reason": adjustment_reason,
+                        "risk_tags": all_risk_tags,
                     },
                 )
 

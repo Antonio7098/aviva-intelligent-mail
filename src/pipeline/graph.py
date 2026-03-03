@@ -8,14 +8,14 @@ import os
 from typing import Optional
 
 from stageflow import Pipeline, StageKind
-from stageflow.pipeline.interceptors import get_default_interceptors
-from stageflow.pipeline.dag import StageGraph
+from stageflow.pipeline.dag import UnifiedStageGraph
 
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.pipeline.stages.classification import LLMClassificationStage
 from src.pipeline.stages.extract_actions import ActionExtractionStage
 from src.pipeline.stages.ingestion import EmailIngestionStage
 from src.pipeline.stages.persistence import ReadModelWriterStage
+from src.pipeline.stages.priority import PriorityPolicyStage
 from src.pipeline.stages.redaction import MinimisationRedactionStage
 from src.privacy.redactor import PIIRedactor
 from src.privacy.presidio_redactor import PresidioRedactor
@@ -32,7 +32,7 @@ def create_email_pipeline(
     pii_redactor: Optional[PIIRedactor] = None,
     llm_client: Optional[LLMClient] = None,
     use_llm: bool = True,
-) -> StageGraph:
+) -> UnifiedStageGraph:
     """Create the email processing pipeline.
 
     DAG:
@@ -92,6 +92,8 @@ def create_email_pipeline(
         database=database, audit_emitter=audit_emitter
     )
 
+    priority_stage = PriorityPolicyStage(audit_emitter=audit_emitter)
+
     if use_llm and action_stage:
         pipeline = (
             Pipeline()
@@ -109,19 +111,30 @@ def create_email_pipeline(
                 dependencies=("minimisation_redaction",),
             )
             .with_stage(
+                "priority_policy",
+                priority_stage,
+                StageKind.ENRICH,
+                dependencies=("llm_classification", "minimisation_redaction"),
+            )
+            .with_stage(
                 "action_extraction",
                 action_stage,
                 StageKind.ENRICH,
-                dependencies=("llm_classification",),
+                dependencies=("priority_policy",),
             )
             .with_stage(
                 "read_model_writer",
                 persistence_stage,
                 StageKind.WORK,
-                dependencies=("action_extraction",),
+                dependencies=(
+                    "action_extraction",
+                    "priority_policy",
+                    "llm_classification",
+                    "minimisation_redaction",
+                ),
             )
         )
-        stage_count = 5
+        stage_count = 6
     else:
         pipeline = (
             Pipeline()
@@ -139,26 +152,32 @@ def create_email_pipeline(
                 dependencies=("minimisation_redaction",),
             )
             .with_stage(
+                "priority_policy",
+                priority_stage,
+                StageKind.ENRICH,
+                dependencies=("placeholder_classification", "minimisation_redaction"),
+            )
+            .with_stage(
                 "read_model_writer",
                 persistence_stage,
                 StageKind.WORK,
-                dependencies=("placeholder_classification",),
+                dependencies=(
+                    "priority_policy",
+                    "placeholder_classification",
+                    "minimisation_redaction",
+                ),
             )
         )
-        stage_count = 4
+        stage_count = 5
 
-    interceptors = get_default_interceptors()
-
-    graph = StageGraph(
+    graph = UnifiedStageGraph(
         specs=pipeline.build().stage_specs,  # type: ignore[arg-type]
-        interceptors=interceptors,
     )
 
     logger.info(
-        "Email pipeline created",
+        "Email pipeline created (UnifiedStageGraph)",
         extra={
             "stages": stage_count,
-            "interceptors": len(interceptors),
             "use_llm": use_llm,
         },
     )

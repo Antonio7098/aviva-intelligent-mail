@@ -138,6 +138,7 @@ class EmailIngestionStage:
         Returns:
             StageOutput with parsed email data and email_hash
         """
+        raw_data: str | dict | None = None
         try:
             raw_data = ctx.snapshot.input_text
             if not raw_data:
@@ -179,24 +180,11 @@ class EmailIngestionStage:
             logger.info(
                 "Email ingested",
                 extra={
-                    "email_id": email.email_id,
                     "email_hash": email_hash,
+                    "email_id": email.email_id,
                     "stage": self.name,
                 },
             )
-
-            ctx.data["email_ingestion_data"] = {
-                "email_id": email.email_id,
-                "email_hash": email_hash,
-                "subject": email.subject,
-                "sender": email.sender,
-                "recipient": email.recipient,
-                "received_at": email.received_at.isoformat(),
-                "body_text": email.body_text,
-                "body_html": email.body_html,
-                "attachments": email.attachments,
-                "thread_id": email.thread_id,
-            }
 
             return StageOutput.ok(
                 email_id=email.email_id,
@@ -218,7 +206,7 @@ class EmailIngestionStage:
                 ctx=ctx,
                 error_type="JSONDecodeError",
                 error_message=str(e),
-                raw_data=raw_data if isinstance(raw_data, str) else None,
+                raw_data=str(raw_data) if raw_data else None,
             )
             return StageOutput.fail(
                 error=f"Invalid JSON: {e}",
@@ -230,7 +218,7 @@ class EmailIngestionStage:
                 ctx=ctx,
                 error_type="ValidationError",
                 error_message=str(e),
-                raw_data=raw_data if isinstance(raw_data, dict) else None,
+                raw_data=str(raw_data) if raw_data else None,
             )
             return StageOutput.fail(
                 error=f"Validation error: {e}",

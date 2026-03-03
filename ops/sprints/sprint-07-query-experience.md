@@ -33,7 +33,7 @@
     - [ ] **Sub-task 1.3:** Define interface methods: `index_documents()`, `search()`, `delete_by_hash()`
     - [ ] **Sub-task 1.4:** Create `store/chroma_store.py` implementing `VectorStore`
     - [ ] **Sub-task 1.5:** Configure ChromaDB collection for redacted summaries
-    - [ ] **Sub-task 1.6:** Set up embedding model (OpenAI embeddings or local alternative)
+    - [ ] **Sub-task 1.6:** Set up embedding model (Gemini embeddings through Openrouter)
     - [ ] **Sub-task 1.7:** Add ChromaDB to docker-compose.yml
     - [ ] **Sub-task 1.8:** Test ChromaDB connectivity
 

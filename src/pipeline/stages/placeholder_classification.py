@@ -255,11 +255,9 @@ class PlaceholderClassificationStage:
             StageOutput with triage decision
         """
         try:
-            redacted_data = ctx.inputs.get_from(
-                "minimisation_redaction", "email_hash", default=None
-            )
-            if not redacted_data:
-                email_hash = ctx.inputs.get("email_hash")
+            redaction_data = ctx.inputs.get_from("minimisation_redaction", "email_hash")
+            if not redaction_data:
+                email_hash = ctx.inputs.get("email_hash", "")
                 subject = ctx.inputs.get("subject", "") or ""
                 body_text = ctx.inputs.get("body_text", "") or ""
             else:
