@@ -1,11 +1,11 @@
 """Read model writer stage for persisting triage decisions to the database."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from stageflow import StageContext, StageKind, StageOutput
+from stageflow import StageKind, StageOutput
 
 from src.domain.triage import (
     ActionType,
@@ -60,13 +60,15 @@ class ReadModelWriterStage:
         self._audit_emitter = emitter
 
     async def _emit_failure_event(
-        self, ctx: StageContext, error_type: str, error_message: str
+        self, ctx, error_type: str, error_message: str
     ) -> None:
         """Emit a failure audit event."""
         if not self._audit_emitter:
             return
 
-        email_hash = ctx.inputs.get("email_hash", "ERROR_NO_EMAIL_HASH")
+        email_hash = ctx.data.get("llm_classification_data", {}).get(
+            "email_hash", "ERROR_NO_EMAIL_HASH"
+        )
 
         await self._audit_emitter.emit(
             correlation_id=ctx.snapshot.request_id or uuid4(),
@@ -108,7 +110,7 @@ class ReadModelWriterStage:
                 extra={"email_hash": email_hash, "count": len(actions)},
             )
 
-    async def execute(self, ctx: StageContext) -> StageOutput:
+    async def execute(self, ctx) -> StageOutput:
         """Execute the persistence stage.
 
         Args:
@@ -118,37 +120,34 @@ class ReadModelWriterStage:
             StageOutput with write confirmation
         """
         try:
-            email_hash = ctx.inputs.get_from(
-                "placeholder_classification", "email_hash", default=None
-            )
-            if not email_hash:
+            llm_data = ctx.data.get("llm_classification_data", {})
+
+            if not llm_data:
                 return StageOutput.fail(
                     error="No classification data from classification stage",
                     data={"stage": self.name},
                 )
 
-            classification = ctx.inputs.get_from(
-                "placeholder_classification", "classification"
-            )
-            confidence = ctx.inputs.get_from("placeholder_classification", "confidence")
-            priority = ctx.inputs.get_from("placeholder_classification", "priority")
-            rationale = ctx.inputs.get_from("placeholder_classification", "rationale")
-            model_name = ctx.inputs.get_from("placeholder_classification", "model_name")
-            model_version = ctx.inputs.get_from(
-                "placeholder_classification", "model_version"
-            )
+            email_hash = llm_data.get("email_hash")
+            classification = llm_data.get("classification")
+            confidence = llm_data.get("confidence")
+            priority = llm_data.get("priority")
+            rationale = llm_data.get("rationale")
+            model_name = llm_data.get("model_name")
+            model_version = llm_data.get("model_version")
 
-            required_actions_data = ctx.inputs.get_from(
-                "placeholder_classification", "required_actions", default=[]
-            )
+            action_data = ctx.data.get("action_extraction_data", {})
+            extracted_actions = action_data.get("actions", [])
+
             required_actions = []
-            for action_data in required_actions_data:
+            for action_item in extracted_actions:
+                action_type_str = action_item.get("action_type", "manual_review")
                 required_actions.append(
                     RequiredAction(
-                        action_type=ActionType(action_data["action_type"]),
-                        entity_refs={},
+                        action_type=ActionType(action_type_str),
+                        entity_refs=action_item.get("entity_refs", {}),
                         deadline=None,
-                        notes=action_data.get("notes"),
+                        notes=action_item.get("notes"),
                     )
                 )
 
@@ -163,7 +162,7 @@ class ReadModelWriterStage:
                 model_name=model_name,
                 model_version=model_version,
                 prompt_version="N/A",
-                processed_at=datetime.utcnow(),
+                processed_at=datetime.now(timezone.utc),
             )
 
             await self._write_decision(decision)

@@ -129,7 +129,7 @@ class EmailIngestionStage:
         content = f"{identifier}:{body}"
         return hashlib.sha256(content.encode()).hexdigest()
 
-    async def execute(self, ctx: StageContext) -> StageOutput:
+    async def execute(self, ctx) -> StageOutput:
         """Execute the ingestion stage.
 
         Args:
@@ -184,6 +184,19 @@ class EmailIngestionStage:
                     "stage": self.name,
                 },
             )
+
+            ctx.data["email_ingestion_data"] = {
+                "email_id": email.email_id,
+                "email_hash": email_hash,
+                "subject": email.subject,
+                "sender": email.sender,
+                "recipient": email.recipient,
+                "received_at": email.received_at.isoformat(),
+                "body_text": email.body_text,
+                "body_html": email.body_html,
+                "attachments": email.attachments,
+                "thread_id": email.thread_id,
+            }
 
             return StageOutput.ok(
                 email_id=email.email_id,

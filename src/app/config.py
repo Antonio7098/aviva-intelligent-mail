@@ -7,6 +7,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     database_url: str = Field(
@@ -30,13 +31,13 @@ class Settings(BaseSettings):
     )
 
     llm_model: str = Field(
-        default="gpt-4o-mini",
-        description="LLM model name",
+        default="nvidia/nemotron-3-nano-30b-a3b:free",
+        description="LLM model name (default: nvidia/nemotron-3-nano-30b-a3b:free)",
     )
 
     llm_base_url: str = Field(
-        default="",
-        description="Base URL for LLM API (for OpenRouter, etc.)",
+        default="https://openrouter.ai/api/v1",
+        description="Base URL for LLM API (defaults to OpenRouter)",
     )
 
     log_level: str = Field(

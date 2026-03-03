@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from stageflow import StageContext, StageKind, StageOutput
+from stageflow import StageKind, StageOutput
 
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.privacy.preprocessing import EmailPreprocessor
@@ -53,7 +53,7 @@ class MinimisationRedactionStage:
 
     async def _emit_redaction_event(
         self,
-        ctx: StageContext,
+        ctx,
         email_hash: str,
         pii_counts: dict[str, int],
         status: str = "success",
@@ -93,7 +93,7 @@ class MinimisationRedactionStage:
 
     async def _emit_failure_event(
         self,
-        ctx: StageContext,
+        ctx,
         email_hash: str,
         error_type: str,
         error_message: str,
@@ -161,7 +161,7 @@ class MinimisationRedactionStage:
 
         return text, {}
 
-    async def execute(self, ctx: StageContext) -> StageOutput:
+    async def execute(self, ctx) -> StageOutput:
         """Execute the redaction stage.
 
         Args:
@@ -171,47 +171,30 @@ class MinimisationRedactionStage:
             StageOutput with redacted email data
         """
         try:
-            email_data = ctx.inputs.get_from(
-                "email_ingestion", "email_hash", default=None
-            )
+            ingestion_data = ctx.data.get("email_ingestion_data", {})
 
-            if not email_data:
-                email_hash = ctx.inputs.get("email_hash")
-                email_id = ctx.inputs.get("email_id", "unknown")
-                subject = ctx.inputs.get("subject", "") or ""
-                sender = ctx.inputs.get("sender", "") or ""
-                recipient = ctx.inputs.get("recipient", "") or ""
-                received_at = ctx.inputs.get("received_at", "") or ""
-                body_text = ctx.inputs.get("body_text")
-                body_html = ctx.inputs.get("body_html")
-                attachments = ctx.inputs.get("attachments", []) or []
-                thread_id = ctx.inputs.get("thread_id")
+            if ingestion_data:
+                email_hash = ingestion_data.get("email_hash")
+                email_id = ingestion_data.get("email_id", "unknown")
+                subject = ingestion_data.get("subject", "") or ""
+                sender = ingestion_data.get("sender", "") or ""
+                recipient = ingestion_data.get("recipient", "") or ""
+                received_at = ingestion_data.get("received_at", "") or ""
+                body_text = ingestion_data.get("body_text")
+                body_html = ingestion_data.get("body_html")
+                attachments = ingestion_data.get("attachments", []) or []
+                thread_id = ingestion_data.get("thread_id")
             else:
-                email_hash = ctx.inputs.get_from("email_ingestion", "email_hash")
-                email_id = ctx.inputs.get_from(
-                    "email_ingestion", "email_id", default="unknown"
-                )
-                subject = (
-                    ctx.inputs.get_from("email_ingestion", "subject", default="") or ""
-                )
-                sender = (
-                    ctx.inputs.get_from("email_ingestion", "sender", default="") or ""
-                )
-                recipient = (
-                    ctx.inputs.get_from("email_ingestion", "recipient", default="")
-                    or ""
-                )
-                received_at = (
-                    ctx.inputs.get_from("email_ingestion", "received_at", default="")
-                    or ""
-                )
-                body_text = ctx.inputs.get_from("email_ingestion", "body_text")
-                body_html = ctx.inputs.get_from("email_ingestion", "body_html")
-                attachments = (
-                    ctx.inputs.get_from("email_ingestion", "attachments", default=[])
-                    or []
-                )
-                thread_id = ctx.inputs.get_from("email_ingestion", "thread_id")
+                email_hash = ctx.snapshot.input_text
+                email_id = "unknown"
+                subject = ""
+                sender = ""
+                recipient = ""
+                received_at = ""
+                body_text = None
+                body_html = None
+                attachments = []
+                thread_id = None
 
             if not email_hash:
                 return StageOutput.fail(
@@ -266,6 +249,20 @@ class MinimisationRedactionStage:
                 },
             )
 
+            ctx.data["minimisation_redaction_data"] = {
+                "email_id": email_id,
+                "email_hash": redacted_email_hash,
+                "subject": redacted_subject,
+                "sender": redacted_sender,
+                "recipient": redacted_recipient,
+                "received_at": received_at,
+                "body_text": redacted_body,
+                "body_html": preprocessed.body_html,
+                "attachments": [a.filename for a in preprocessed.attachments],
+                "thread_id": thread_id,
+                "pii_counts": pii_counts,
+            }
+
             return StageOutput.ok(
                 email_id=email_id,
                 email_hash=redacted_email_hash,
@@ -283,7 +280,9 @@ class MinimisationRedactionStage:
 
         except Exception as e:
             logger.exception("Error in redaction stage")
-            email_hash = ctx.inputs.get("email_hash", "ERROR_NO_EMAIL_HASH")
+            email_hash = ctx.data.get("minimisation_redaction_data", {}).get(
+                "email_hash", "ERROR_NO_EMAIL_HASH"
+            )
             await self._emit_failure_event(
                 ctx=ctx,
                 email_hash=email_hash,
