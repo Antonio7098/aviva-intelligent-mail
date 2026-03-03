@@ -38,7 +38,7 @@ class PipelineEvaluator(BaseEvalRunner):
         self._vector_store = vector_store
         self._database = database
         self._use_llm = use_llm and llm_client is not None
-        self._prompt_version = "eval-v1"
+        self._prompt_version = "v1.0"
         if self._use_llm and hasattr(llm_client, "model_name"):
             self._model_name = llm_client.model_name
         else:
@@ -119,7 +119,10 @@ class PipelineEvaluator(BaseEvalRunner):
                 latency_ms=0.0,
             )
 
-        except Exception:
+        except Exception as e:
+            import logging
+
+            logging.warning(f"LLM classification failed: {e}, falling back to general")
             return EvaluationResult(
                 email_hash=email_hash,
                 predicted_classification="general",

@@ -296,6 +296,7 @@ def run(
         labels_dict = label_dataset.to_dict()
 
         llm_client = None
+        actual_model_name = "eval-placeholder"
         if use_llm:
             try:
                 import os
@@ -307,20 +308,41 @@ def run(
                         "Warning: No API key found (OPENROUTER_API_KEY or OPENAI_API_KEY)",
                         err=True,
                     )
-                    typer.echo("Falling back to placeholder classifier")
+                    typer.echo("Using placeholder classifier")
                     use_llm = False
                 else:
                     llm_client = OpenAIClient(api_key=api_key)
-                    typer.echo(f"Using LLM: {llm_client.model_name}")
+                    actual_model_name = llm_client.model_name
+                    typer.echo(f"Using LLM: {actual_model_name}")
             except Exception as e:
                 typer.echo(f"Warning: Could not create LLM client: {e}", err=True)
-                typer.echo("Falling back to placeholder classifier")
+                typer.echo("Using placeholder classifier")
                 use_llm = False
+                llm_client = None
 
         evaluator = PipelineEvaluator(llm_client=llm_client, use_llm=use_llm)
 
         typer.echo(f"Running evaluation on {len(dataset.emails)} emails...")
-        results = evaluator.run_evaluation(dataset.to_dict_list())
+
+        llm_failures = 0
+        try:
+            results = evaluator.run_evaluation(dataset.to_dict_list())
+            # Check if any results have the fallback classification (indicates LLM failure)
+            llm_failures = sum(
+                1
+                for r in results
+                if r.predicted_classification == "general" and r.confidence == 0.0
+            )
+            if llm_failures > 0:
+                typer.echo(
+                    f"Warning: {llm_failures}/{len(results)} emails failed LLM classification, used placeholder",
+                    err=True,
+                )
+        except Exception as e:
+            typer.echo(f"Error during evaluation: {e}", err=True)
+            use_llm = False
+            evaluator = PipelineEvaluator(llm_client=None, use_llm=False)
+            results = evaluator.run_evaluation(dataset.to_dict_list())
 
         metrics = evaluator.calculate_metrics(results, labels_dict)
 
@@ -355,7 +377,7 @@ def run(
 
         tracker = EvaluationTracker()
         tracker.record_snapshot(
-            model_name=evaluator._model_name,
+            model_name=actual_model_name,
             model_version="1.0.0",
             prompt_version=evaluator._prompt_version,
             metrics=asdict(metrics),

@@ -10,11 +10,11 @@
 
 This document captures the results of running the evaluation harness against the golden dataset (20 emails). The evaluation framework is now functional and provides metrics for classification accuracy, priority assignment, action extraction, and latency.
 
-**Key Findings:**
-- Classification accuracy: 65% (target: >85%)
-- P1 Recall: 66.67% (target: >95%) 
-- Macro F1 Score: 85.42% (target: >0.80) ✓
-- Latency: Sub-millisecond (excellent)
+**Best Results (openai/gpt-oss-20b):**
+- Classification accuracy: **95%** (target: >85%) ✓
+- Macro F1 Score: **0.95** (target: >0.80) ✓
+- P1 Recall: **0%** (target: >95%) ❌ - needs improvement
+- Latency: ~8.4s average (acceptable for LLM)
 
 ---
 
@@ -44,6 +44,26 @@ This document captures the results of running the evaluation harness against the
 ---
 
 ## Evaluation Results
+
+### GPT-OSS 20B (openai/gpt-oss-20b) - Best Result
+
+```
+==================================================
+Evaluation Results (GPT-OSS 20B)
+==================================================
+Total Emails: 20
+Classification Accuracy: 95.00%
+Macro F1 Score: 0.9500
+P1 Recall: 0.00%
+P1 False Negative Rate: 100.00%
+Action Precision: 9.52%
+Action Recall: 7.69%
+Priority Agreement: 50.00%
+Average Latency: 8354.68ms
+P95 Latency: 17535.07ms
+P99 Latency: 17535.07
+==================================================
+```
 
 ### Placeholder Classifier (Baseline)
 
@@ -85,10 +105,10 @@ P99 Latency: 0.49
 ==================================================
 ```
 
-**Note:** The LLM (a small free-tier model) performed poorly compared to the keyword-based placeholder. This indicates:
-1. The model may need prompt engineering improvements
-2. A more capable model may be needed for production
-3. The placeholder classifier provides a reasonable baseline
+**Note:** The GPT-OSS 20B model significantly outperforms both the placeholder and the smaller Nemotron model. Key improvements:
+- Classification Accuracy: 95% (vs 65% placeholder)
+- Macro F1: 0.95 (vs 0.85 placeholder)
+- Still needs improvement on P1 priority detection
 
 ---
 

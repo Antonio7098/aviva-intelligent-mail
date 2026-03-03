@@ -44,7 +44,7 @@ class OpenAIClient:
     """
 
     DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
-    DEFAULT_MODEL = "nvidia/nemotron-3-nano-30b-a3b:free"
+    DEFAULT_MODEL = "openai/gpt-oss-20b"
 
     def __init__(
         self,
