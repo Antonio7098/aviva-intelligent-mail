@@ -27,3 +27,7 @@ mypy>=1.7.0
 
 # Security
 pip-audit>=2.10.0
+
+# Privacy - PII Detection & Redaction
+presidio-analyzer>=2.1.0
+presidio-anonymizer>=2.1.0

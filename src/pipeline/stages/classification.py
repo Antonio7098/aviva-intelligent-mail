@@ -251,30 +251,35 @@ class PlaceholderClassificationStage:
         """Execute the classification stage.
 
         Args:
-            ctx: Stage context with input data from ingestion stage
+            ctx: Stage context with input data from redaction stage
 
         Returns:
             StageOutput with triage decision
         """
         try:
-            email_data = ctx.inputs.get_from(
-                "email_ingestion", "email_hash", default=None
+            redacted_data = ctx.inputs.get_from(
+                "minimisation_redaction", "email_hash", default=None
             )
-            if not email_data:
+            if not redacted_data:
                 email_hash = ctx.inputs.get("email_hash")
                 subject = ctx.inputs.get("subject", "") or ""
                 body_text = ctx.inputs.get("body_text", "") or ""
             else:
-                email_hash = ctx.inputs.get_from("email_ingestion", "email_hash")
-                subject = ctx.inputs.get_from("email_ingestion", "subject", default="")
+                email_hash = ctx.inputs.get_from("minimisation_redaction", "email_hash")
+                subject = (
+                    ctx.inputs.get_from("minimisation_redaction", "subject", default="")
+                    or ""
+                )
                 body_text = (
-                    ctx.inputs.get_from("email_ingestion", "body_text", default="")
+                    ctx.inputs.get_from(
+                        "minimisation_redaction", "body_text", default=""
+                    )
                     or ""
                 )
 
             if not email_hash:
                 return StageOutput.fail(
-                    error="No email data from ingestion stage",
+                    error="No email data from redaction stage",
                     data={"stage": self.name},
                 )
 

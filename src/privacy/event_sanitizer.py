@@ -41,7 +41,8 @@ FORBIDDEN_PATTERNS = [
     (r"body_text|body_html|email_body|raw_body", "raw email body"),
     (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "raw email address"),
     (r"\b\d{10,}\b", "potential phone number"),
-    (r"claim_id|policy_number|policy_id", "claim/policy identifiers (use hashed)"),
+    (r":\s*['\"]?\d{2}-\d{6}['\"]?", "claim reference number"),
+    (r":\s*['\"]?POL-\d{9}['\"]?", "policy number"),
 ]
 
 
