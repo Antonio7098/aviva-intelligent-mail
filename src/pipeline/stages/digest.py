@@ -75,7 +75,16 @@ class DigestBuilderStage:
 
     def _get_classification_counts(self, decisions: list[dict]) -> DigestSummaryCounts:
         """Aggregate counts by classification."""
-        counts = DigestSummaryCounts()
+        counts = DigestSummaryCounts(
+            new_claims=0,
+            claim_updates=0,
+            policy_inquiries=0,
+            complaints=0,
+            renewals=0,
+            cancellations=0,
+            general=0,
+            total=0,
+        )
         for decision in decisions:
             classification = decision.get("classification", "general")
             if classification == Classification.NEW_CLAIM:
@@ -97,7 +106,7 @@ class DigestBuilderStage:
 
     def _get_priority_breakdown(self, decisions: list[dict]) -> PriorityBreakdown:
         """Aggregate counts by priority."""
-        breakdown = PriorityBreakdown()
+        breakdown = PriorityBreakdown(p1_critical=0, p2_high=0, p3_medium=0, p4_low=0)
         for decision in decisions:
             priority = decision.get(
                 "adjusted_priority", decision.get("priority", "p4_low")
