@@ -35,6 +35,11 @@ class Settings(BaseSettings):
         description="LLM model name (default: nvidia/nemotron-3-nano-30b-a3b:free)",
     )
 
+    embedding_model: str = Field(
+        default="nvidia/llama-nemotron-embed-vl-1b-v2:free",
+        description="Embedding model name (default: nvidia/llama-nemotron-embed-vl-1b-v2:free)",
+    )
+
     llm_base_url: str = Field(
         default="https://openrouter.ai/api/v1",
         description="Base URL for LLM API (defaults to OpenRouter)",

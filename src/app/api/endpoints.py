@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import stageflow
@@ -14,11 +14,18 @@ from src.app.logging_config import get_logger
 from src.audit.postgres_sink import PostgresAuditSink
 from src.audit.sink import AuditSink
 from src.domain.digest import DailyDigest
+from src.llm.answering import AnswerGenerator
+from src.llm.grounded_answerer import GroundedAnswerer
+from src.llm.grounded_guard import GroundedGuard
+from src.llm.openai_client import OpenAIClient
 from src.pipeline.graph import create_email_pipeline
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.privacy.event_sanitizer import EventSanitizer
+from src.store.chroma_store import ChromaVectorStore
 from src.store.digests import DigestWriter
 from src.store.postgres_db import PostgresDatabase
+from src.store.retrieval import Retriever
+from src.store.vector import VectorStore
 
 logger = get_logger(__name__)
 
@@ -26,6 +33,11 @@ router = APIRouter()
 
 _db_instance: Optional[PostgresDatabase] = None
 _audit_sink: Optional[AuditSink] = None
+_vector_store: Optional[VectorStore] = None
+_retriever: Optional[Retriever] = None
+_llm_client: Optional[Any] = None
+_answer_generator: Optional[AnswerGenerator] = None
+_hallucination_guard: Optional[GroundedGuard] = None
 
 
 async def get_db() -> PostgresDatabase:
@@ -44,6 +56,56 @@ async def get_audit_sink() -> AuditSink:
         db = await get_db()
         _audit_sink = PostgresAuditSink(db, EventSanitizer(safe_mode=False))
     return _audit_sink
+
+
+async def get_vector_store() -> VectorStore:
+    """Get vector store instance."""
+    global _vector_store
+    if _vector_store is None:
+        _vector_store = ChromaVectorStore()
+    return _vector_store
+
+
+async def get_retriever() -> Retriever:
+    """Get retriever instance."""
+    global _retriever
+    if _retriever is None:
+        vector_store = await get_vector_store()
+        _retriever = Retriever(vector_store=vector_store, top_k=5)
+    return _retriever
+
+
+async def get_llm_client() -> Any:
+    """Get LLM client instance."""
+    global _llm_client
+    if _llm_client is None:
+        _llm_client = OpenAIClient(
+            api_key=settings.llm_api_key,
+            model=settings.llm_model,
+            base_url=settings.llm_base_url,
+        )
+    return _llm_client
+
+
+async def get_answer_generator() -> AnswerGenerator:
+    """Get answer generator instance."""
+    global _answer_generator
+    if _answer_generator is None:
+        llm_client = await get_llm_client()
+        _answer_generator = GroundedAnswerer(llm_client=llm_client)
+    return _answer_generator
+
+
+async def get_hallucination_guard() -> GroundedGuard:
+    """Get hallucination guard instance."""
+    global _hallucination_guard
+    if _hallucination_guard is None:
+        _hallucination_guard = GroundedGuard(
+            min_retrieval_count=1,
+            min_avg_score=0.3,
+            require_citations=True,
+        )
+    return _hallucination_guard
 
 
 class EmailRecordInput(BaseModel):
@@ -435,4 +497,214 @@ async def get_digest(
         actionable_emails=[a.model_dump() for a in digest.actionable_emails],
         model_version=digest.model_version,
         total_processed=digest.total_processed,
+    )
+
+
+class QueryRequest(BaseModel):
+    """Request body for POST /query endpoint."""
+
+    question: str = Field(..., min_length=1, description="User question")
+    top_k: int = Field(
+        default=5, ge=1, le=20, description="Number of documents to retrieve"
+    )
+    filters: Optional[dict[str, Any]] = Field(
+        default=None, description="Optional metadata filters"
+    )
+
+
+class QueryResponse(BaseModel):
+    """Response model for POST /query endpoint."""
+
+    question: str
+    answer: str
+    citations: list[str]
+    retrieval_count: int
+    retrieval_weak: bool = False
+    model_name: Optional[str] = None
+
+
+@router.post("/query", response_model=QueryResponse)
+async def query_documents(
+    request: QueryRequest,
+    retriever: Retriever = Depends(get_retriever),
+    answer_generator: AnswerGenerator = Depends(get_answer_generator),
+    hallucination_guard: GroundedGuard = Depends(get_hallucination_guard),
+    audit_sink: AuditSink = Depends(get_audit_sink),
+):
+    """Query indexed documents with grounded answering.
+
+    This endpoint:
+    1. Embeds the question and retrieves relevant documents from vector store
+    2. Generates answer constrained to retrieved context via LLM
+    3. Validates answer via hallucination guard
+    4. Returns answer with email_hash citations
+
+    Privacy:
+    - Only searches redacted summaries, never raw emails
+    - Returns email_hash citations, never raw content
+
+    Args:
+        request: The query request with question
+        retriever: Retriever dependency
+        answer_generator: Answer generator dependency
+        hallucination_guard: Hallucination guard dependency
+        audit_sink: Audit sink dependency
+
+    Returns:
+        QueryResponse with answer and citations
+    """
+    from src.domain.audit import AuditEventCreate
+    from uuid import uuid4
+
+    logger.info(
+        "Processing query",
+        extra={"question": request.question[:100], "top_k": request.top_k},
+    )
+
+    correlation_id = uuid4()
+
+    results = await retriever.retrieve(
+        query=request.question,
+        top_k=request.top_k,
+        filters=request.filters,
+    )
+
+    retrieval_count = len(results)
+    avg_score = (
+        sum(r.score for r in results) / retrieval_count if retrieval_count > 0 else 0.0
+    )
+
+    is_sufficient, retrieval_msg = hallucination_guard.check_retrieval(
+        retrieval_count=retrieval_count,
+        avg_score=avg_score,
+    )
+
+    if not is_sufficient:
+        no_evidence_msg = hallucination_guard.get_no_evidence_message()
+
+        try:
+            event = AuditEventCreate(
+                correlation_id=correlation_id,
+                email_hash="QUERY",
+                event_type="QUERY_EXECUTED",
+                stage="api",
+                status="weak_retrieval",
+                actor="query_api",
+                model_name="chroma",
+                model_version="1.0",
+                prompt_version=None,
+                ruleset_version=None,
+                payload_json={
+                    "question": request.question,
+                    "answer": no_evidence_msg,
+                    "citations": [],
+                    "retrieval_count": retrieval_count,
+                    "avg_score": avg_score,
+                },
+            )
+            await audit_sink.write_event(event)
+        except Exception as e:
+            logger.warning("Failed to emit audit event", extra={"error": str(e)})
+
+        return QueryResponse(
+            question=request.question,
+            answer=no_evidence_msg,
+            citations=[],
+            retrieval_count=retrieval_count,
+            retrieval_weak=True,
+        )
+
+    context = await retriever.get_context(request.question, top_k=request.top_k)
+    citations = [r.email_hash for r in results]
+
+    answer_result = await answer_generator.generate_answer(
+        question=request.question,
+        context=context,
+        citations=citations,
+    )
+
+    answer = answer_result.get("answer", "")
+    found_citations = answer_result.get("citations", [])
+
+    citations_valid, _ = hallucination_guard.validate_citations(
+        answer=answer,
+        expected_citations=citations,
+    )
+
+    validation_result = {
+        "retrieval_sufficient": True,
+        "citations_valid": citations_valid,
+        "citations_count": len(found_citations),
+    }
+
+    should_reject, reject_reason = hallucination_guard.should_reject(validation_result)
+
+    if should_reject:
+        logger.warning(
+            "Answer rejected by hallucination guard", extra={"reason": reject_reason}
+        )
+
+        hallucination_guard.log_guard_trigger(
+            "answer_validation",
+            {"reason": reject_reason, "question": request.question[:100]},
+        )
+
+        try:
+            event = AuditEventCreate(
+                correlation_id=correlation_id,
+                email_hash="QUERY",
+                event_type="QUERY_EXECUTED",
+                stage="api",
+                status="rejected",
+                actor="query_api",
+                model_name="chroma",
+                model_version="1.0",
+                prompt_version=None,
+                ruleset_version=None,
+                payload_json={
+                    "question": request.question,
+                    "reject_reason": reject_reason,
+                    "retrieval_count": retrieval_count,
+                },
+            )
+            await audit_sink.write_event(event)
+        except Exception as e:
+            logger.warning("Failed to emit audit event", extra={"error": str(e)})
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"Answer rejected: {reject_reason}",
+        )
+
+    try:
+        event = AuditEventCreate(
+            correlation_id=correlation_id,
+            email_hash="QUERY",
+            event_type="QUERY_EXECUTED",
+            stage="api",
+            status="success",
+            actor="query_api",
+            model_name="chroma",
+            model_version="1.0",
+            prompt_version=None,
+            ruleset_version=None,
+            payload_json={
+                "question": request.question,
+                "answer": answer,
+                "citations": found_citations,
+                "retrieval_count": retrieval_count,
+                "avg_score": avg_score,
+            },
+        )
+        await audit_sink.write_event(event)
+    except Exception as e:
+        logger.warning("Failed to emit audit event", extra={"error": str(e)})
+
+    return QueryResponse(
+        question=request.question,
+        answer=answer,
+        citations=found_citations,
+        retrieval_count=retrieval_count,
+        retrieval_weak=False,
+        model_name=answer_result.get("model_name"),
     )
