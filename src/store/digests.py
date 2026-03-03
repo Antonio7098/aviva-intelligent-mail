@@ -100,15 +100,35 @@ class DigestWriter:
 
     def _row_to_digest(self, row: dict[str, Any]) -> DailyDigest:
         """Convert a database row to a DailyDigest."""
+        corr_id = row["correlation_id"]
+        if hasattr(corr_id, "hex"):
+            corr_id = str(corr_id)
+
+        summary_counts = row.get("summary_counts", {})
+        if isinstance(summary_counts, str):
+            summary_counts = json.loads(summary_counts)
+
+        priority_breakdown = row.get("priority_breakdown", {})
+        if isinstance(priority_breakdown, str):
+            priority_breakdown = json.loads(priority_breakdown)
+
+        top_priorities = row.get("top_priorities", [])
+        if isinstance(top_priorities, str):
+            top_priorities = json.loads(top_priorities)
+
+        actionable_emails = row.get("actionable_emails", [])
+        if isinstance(actionable_emails, str):
+            actionable_emails = json.loads(actionable_emails)
+
         return DailyDigest(
-            correlation_id=UUID(row["correlation_id"]),
+            correlation_id=UUID(corr_id),
             handler_id=row["handler_id"],
             digest_date=row["digest_date"],
             generated_at=row.get("generated_at", datetime.utcnow()),
-            summary_counts=DigestSummaryCounts(**(row.get("summary_counts", {}))),
-            priority_breakdown=PriorityBreakdown(**(row.get("priority_breakdown", {}))),
-            top_priorities=row.get("top_priorities", []),
-            actionable_emails=row.get("actionable_emails", []),
+            summary_counts=DigestSummaryCounts(**(summary_counts or {})),
+            priority_breakdown=PriorityBreakdown(**(priority_breakdown or {})),
+            top_priorities=top_priorities or [],
+            actionable_emails=actionable_emails or [],
             model_version=row.get("model_version", ""),
             total_processed=row.get("total_processed", 0),
         )

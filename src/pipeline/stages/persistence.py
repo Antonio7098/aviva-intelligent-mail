@@ -12,6 +12,7 @@ from src.domain.triage import (
     Classification,
     Priority,
     RequiredAction,
+    RiskTag,
     TriageDecision,
 )
 from src.pipeline.stages.audit_emitter import AuditEmitter
@@ -136,6 +137,13 @@ class ReadModelWriterStage:
             model_name = llm_data.get("model_name")
             model_version = llm_data.get("model_version")
 
+            policy_data = ctx.data.get("priority_policy_data", {})
+            adjusted_priority = policy_data.get("adjusted_priority", priority)
+            adjustment_reason = policy_data.get("adjustment_reason", "")
+            all_risk_tags = policy_data.get(
+                "all_risk_tags", llm_data.get("risk_tags", [])
+            )
+
             action_data = ctx.data.get("action_extraction_data", {})
             extracted_actions = action_data.get("actions", [])
 
@@ -151,13 +159,20 @@ class ReadModelWriterStage:
                     )
                 )
 
+            risk_tags_list = []
+            for rt in all_risk_tags:
+                try:
+                    risk_tags_list.append(RiskTag(rt))
+                except ValueError:
+                    pass
+
             decision = TriageDecision(
                 email_hash=email_hash,
                 classification=Classification(classification),
                 confidence=confidence,
-                priority=Priority(priority),
+                priority=Priority(adjusted_priority),
                 required_actions=required_actions,
-                risk_tags=[],
+                risk_tags=risk_tags_list,
                 rationale=rationale,
                 model_name=model_name,
                 model_version=model_version,
@@ -181,7 +196,10 @@ class ReadModelWriterStage:
                         "decision_written": True,
                         "actions_written": len(required_actions),
                         "classification": classification,
-                        "priority": priority,
+                        "original_priority": priority,
+                        "adjusted_priority": adjusted_priority,
+                        "adjustment_reason": adjustment_reason,
+                        "risk_tags": all_risk_tags,
                     },
                 )
 

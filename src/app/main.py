@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from src.app.logging_config import CorrelationIdMiddleware, setup_logging, get_logger
 from src.app.config import settings
 from src.store.postgres_db import PostgresDatabase
+from src.app.api import endpoints
 
 
 _db_instance: PostgresDatabase | None = None
@@ -51,6 +52,8 @@ app = FastAPI(
 )
 
 app.add_middleware(CorrelationIdMiddleware)
+
+app.include_router(endpoints.router, prefix="/api/v1", tags=["processing"])
 
 
 @app.get("/health")
