@@ -19,10 +19,6 @@ class TestEventSanitizer:
             email_hash="abc123",
             event_type=event_type,
             stage="test",
-            actor=None,
-            model_name=None,
-            prompt_version=None,
-            ruleset_version=None,
             status="success",
             payload_json=payload,
         )
