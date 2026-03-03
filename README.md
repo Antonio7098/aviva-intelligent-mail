@@ -124,6 +124,16 @@ stageflow-docs/            # Stageflow framework docs
 4. **Action Extraction** - Extract required actions from emails
 5. **Persistence** - Privacy-gated write to event store
 
+## Reliability
+
+The pipeline uses Stageflow interceptors for resilience:
+
+- **CircuitBreakerInterceptor** - Prevents cascading failures when downstream services fail
+- **RetryInterceptor** - Automatic retry with exponential backoff + jitter for transient failures
+- **TimeoutInterceptor** - Enforces per-stage timeouts
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed failure handling.
+
 ## Security
 
 - No secrets in repository

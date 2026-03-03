@@ -505,6 +505,16 @@ This enables:
 
 # 11. Failure Handling
 
+## Stageflow Interceptors
+
+The pipeline uses Stageflow interceptors for resilience:
+
+- **CircuitBreakerInterceptor** (priority 10) - Prevents cascading failures by tracking stage failures. After 5 failures, the circuit opens for 30 seconds before allowing test requests (half-open state).
+- **RetryInterceptor** (priority 15) - Automatic retry with exponential backoff + full jitter for transient failures (TimeoutError, ConnectionError, OSError). Configurable max attempts, base delay, and max delay.
+- **TimeoutInterceptor** (priority 5) - Enforces per-stage execution timeouts (default 30 seconds).
+
+## Failure Modes
+
 If redaction fails:
 → SAFE_MODE
 → mark for human review
@@ -515,8 +525,9 @@ If schema validation fails:
 → else mark manual review
 
 If LLM unavailable:
-→ circuit breaker
-→ stop batch
+→ circuit breaker triggers
+→ retry with backoff
+→ stop batch if circuit open
 
 No partial unsafe output.
 
