@@ -32,7 +32,6 @@ This directory contains business and operational documentation for Aviva Intelli
 
 - [SOLID.md](SOLID.md) - SOLID principles implementation across codebase
 - [PRIVACY.md](PRIVACY.md) - Privacy layer implementation (Sprint 4)
-- [Stageflow Docs](../stageflow-docs/) - Stageflow framework documentation
 
 ---
 
@@ -80,4 +79,3 @@ When implementing features:
 For questions about documentation or architecture:
 - Review [ARCHITECTURE.md](ARCHITECTURE.md) first
 - Check relevant sprint document in [ops/sprints/](../ops/sprints/)
-- Consult [Stageflow Docs](../stageflow-docs/) for Stageflow details

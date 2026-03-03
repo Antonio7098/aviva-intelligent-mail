@@ -30,7 +30,6 @@ Aviva Intelligent Mail (AIM) is an AI-powered solution that classifies, prioriti
 - [ROADMAP.md](./ops/ROADMAP.md) - Sprint roadmap
 - [SPRINT_TEMPLATE.md](./ops/SPRINT_TEMPLATE.md) - Sprint planning template
 - [docs/](./docs/) - Business and operational documentation
-- [stageflow-docs/](./stageflow-docs/) - Stageflow framework docs
 
 ## Quick Start
 
