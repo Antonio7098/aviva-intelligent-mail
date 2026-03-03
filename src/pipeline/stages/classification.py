@@ -5,7 +5,6 @@ with LLM integration in Sprint 5.
 """
 
 import logging
-from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
@@ -16,7 +15,6 @@ from src.domain.triage import (
     Classification,
     Priority,
     RequiredAction,
-    TriageDecision,
 )
 from src.pipeline.stages.audit_emitter import AuditEmitter
 
@@ -287,20 +285,6 @@ class PlaceholderClassificationStage:
             priority = self._determine_priority(subject, body_text, classification)
             rationale = self._generate_rationale(classification, priority)
             required_actions = self._extract_actions(classification)
-
-            _decision = TriageDecision(
-                email_hash=email_hash,
-                classification=classification,
-                confidence=0.5,
-                priority=priority,
-                required_actions=required_actions,
-                risk_tags=[],
-                rationale=rationale,
-                model_name=self._model_name,
-                model_version=self._model_version,
-                prompt_version="N/A",
-                processed_at=datetime.utcnow(),
-            )
 
             correlation_id = ctx.snapshot.request_id or uuid4()
 

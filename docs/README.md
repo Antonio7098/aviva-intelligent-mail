@@ -31,6 +31,7 @@ This directory contains business and operational documentation for Aviva Intelli
 
 - [../cmi-stageflow-architecture.md](../cmi-stageflow-architecture.md) - Stageflow integration details
 - [SOLID.md](SOLID.md) - SOLID principles implementation across codebase
+- [PRIVACY.md](PRIVACY.md) - Privacy layer implementation (Sprint 4)
 - Stageflow capabilities and patterns for CMI
 
 ---
