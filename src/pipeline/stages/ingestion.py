@@ -138,6 +138,7 @@ class EmailIngestionStage:
         Returns:
             StageOutput with parsed email data and email_hash
         """
+        raw_data: str | dict | None = None
         try:
             raw_data = ctx.snapshot.input_text
             if not raw_data:
@@ -205,7 +206,7 @@ class EmailIngestionStage:
                 ctx=ctx,
                 error_type="JSONDecodeError",
                 error_message=str(e),
-                raw_data=raw_data if isinstance(raw_data, str) else None,
+                raw_data=str(raw_data) if raw_data else None,
             )
             return StageOutput.fail(
                 error=f"Invalid JSON: {e}",
@@ -217,7 +218,7 @@ class EmailIngestionStage:
                 ctx=ctx,
                 error_type="ValidationError",
                 error_message=str(e),
-                raw_data=raw_data if isinstance(raw_data, dict) else None,
+                raw_data=str(raw_data) if raw_data else None,
             )
             return StageOutput.fail(
                 error=f"Validation error: {e}",

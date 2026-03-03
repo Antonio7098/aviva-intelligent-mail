@@ -321,7 +321,16 @@ async def process_emails(
 
     from src.domain.digest import DigestSummaryCounts, PriorityBreakdown
 
-    counts = DigestSummaryCounts()
+    counts = DigestSummaryCounts(
+        new_claims=0,
+        claim_updates=0,
+        policy_inquiries=0,
+        complaints=0,
+        renewals=0,
+        cancellations=0,
+        general=0,
+        total=0,
+    )
     for d in batch_decisions:
         cls = d["classification"]
         if cls == "new_claim":
@@ -340,7 +349,7 @@ async def process_emails(
             counts.general += 1
     counts.total = len(batch_decisions)
 
-    breakdown = PriorityBreakdown()
+    breakdown = PriorityBreakdown(p1_critical=0, p2_high=0, p3_medium=0, p4_low=0)
     for d in batch_decisions:
         p = d.get("adjusted_priority", d.get("priority", "p4_low"))
         if p == "p1_critical":
