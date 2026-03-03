@@ -2,6 +2,8 @@
 
 > **Project:** Aviva Intelligent Mail - Privacy-first GenAI email triage for insurance operations
 
+> **Branch:** Start with `git checkout -b sprint/sprint-08-evaluation-governance`
+
 ---
 
 ## 📅 Sprint Overview
@@ -77,15 +79,6 @@
     - [ ] **Sub-task 6.4:** Track SAFE_MODE triggers
     - [x] **Sub-task 6.5:** Display operational metrics report
 
-- [x] **Task 7: Regression Tracking**
-    > *Description: Track evaluation results per prompt/model version.*
-    - [x] **Sub-task 7.1:** Create `eval/tracking.py` module
-    - [x] **Sub-task 7.2:** Snapshot evaluation outputs with model_name, prompt_version
-    - [x] **Sub-task 7.3:** Store metrics in JSON or database
-    - [x] **Sub-task 7.4:** Implement comparison: version A vs version B
-    - [x] **Sub-task 7.5:** Highlight regressions (e.g., P1 recall drop)
-    - [x] **Sub-task 7.6:** Display comparison report
-
 - [x] **Task 8: Governance Report**
     > *Description: Export basic governance and operational report.*
     - [x] **Sub-task 8.1:** Create `eval/report.py` module
@@ -93,7 +86,14 @@
     - [x] **Sub-task 8.3:** Include SAFE_MODE counts and reasons
     - [x] **Sub-task 8.4:** Include model and prompt version information
     - [x] **Sub-task 8.5:** Export to PDF or JSON format
-    - [ ] **Sub-task 8.6:** Add CLI command: `cmi eval --report`
+    - [x] **Task 8: Governance Report**
+    > *Description: Export basic governance and operational report.*
+    - [x] **Sub-task 8.1:** Create `eval/report.py` module
+    - [x] **Sub-task 8.2:** Aggregate metrics: volume, priority distribution, failure rates
+    - [x] **Sub-task 8.3:** Include SAFE_MODE counts and reasons
+    - [x] **Sub-task 8.4:** Include model and prompt version information
+    - [x] **Sub-task 8.5:** Export to PDF or JSON format
+    - [x] **Sub-task 8.6:** Add CLI command: `cmi eval run` and `cmi eval report`
 
 - [x] **Task 9: PII Detection & Redaction Evaluation**
     > *Description: Evaluate PII detection and redaction quality (from Sprint 4).*

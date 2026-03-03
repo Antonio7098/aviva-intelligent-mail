@@ -84,3 +84,7 @@ tmp/
 temp/
 *.tmp
 .env
+
+emails_candidate.json
+
+stageflow-docs/

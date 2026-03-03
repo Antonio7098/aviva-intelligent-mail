@@ -2,6 +2,8 @@
 
 > **Project:** Aviva Intelligent Mail - Privacy-first GenAI email triage for insurance operations
 
+> **Branch:** Start with `git checkout -b sprint/sprint-03-ingestion-pipeline`
+
 ---
 
 ## 📅 Sprint Overview
@@ -89,6 +91,7 @@
     - [ ] **Sub-task 8.3:** Track error counts and failures
     - [ ] **Sub-task 8.4:** Emit metrics as part of audit events
     - [ ] **Sub-task 8.5:** Add structured logging for metrics
+    - [ ] **Sub-task 8.6:** Emit audit events on stage failures (validation, errors) for full traceability
 
 ---
 
@@ -138,6 +141,7 @@ This sprint is considered successful when:
 * [ ] **No Raw Bodies Stored** - Verification tests prove no raw email content in database
 * [ ] **Correlation IDs Present** - All audit events have batch and per-email correlation IDs
 * [ ] **CLI Functional** - `cmi process --input emails.json --run-id test-1` works
+* [ ] **Error Audit Events** - Stage failures emit audit events for traceability
 
 **Minimum Viable Sprint:** Pipeline processes JSON and writes to Postgres without errors
 

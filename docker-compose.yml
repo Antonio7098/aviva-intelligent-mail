@@ -2,17 +2,19 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "8002:8002"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/aviva_claims
-      - CHROMA_URL=http://chroma:8001
+      - CHROMA_URL=http://chroma:8000
       - LOG_LEVEL=INFO
+      - CHROMA_TELEMETRY=False
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - .:/app
-    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8002 --reload
 
   postgres:
     image: postgres:16-alpine
@@ -21,7 +23,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=aviva_claims
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

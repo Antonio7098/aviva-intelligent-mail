@@ -115,7 +115,6 @@ Review steps (follow in order):
 - Are new config flags documented?
 - Is runbook updated if required?
 - Are migration instructions clear?
-- Is changelog updated (`changelog.json`)?
 
 13) Process compliance
 - Has API been manually tested?
@@ -124,6 +123,6 @@ Review steps (follow in order):
 
 ---
 
-Output format: Follow code review report template: [code-review-report-template.md](./code-review-report-template.md)
+Output format: Follow code review report template: [code-review-report-template.md](./ai/code-review-report-template.md)
 
 ---

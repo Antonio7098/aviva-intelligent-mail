@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -15,6 +15,10 @@ class RedactedEmail(BaseModel):
     sender_domain: str = Field(..., description="Sender domain (redacted)")
     has_attachments: bool = Field(..., description="Whether email had attachments")
     attachment_count: int = Field(default=0, description="Number of attachments")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for evaluation."""
+        return self.model_dump()
 
 
 class GoldenEmailDataset(BaseModel):
@@ -36,6 +40,10 @@ class GoldenEmailDataset(BaseModel):
         with open(path, "w") as f:
             f.write(self.model_dump_json(indent=2))
 
+    def to_dict_list(self) -> list[dict[str, Any]]:
+        """Convert emails to list of dictionaries for evaluation."""
+        return [email.to_dict() for email in self.emails]
+
 
 class EmailLabels(BaseModel):
     """Expected labels for a golden email."""
@@ -46,6 +54,9 @@ class EmailLabels(BaseModel):
     required_actions: list[str] = Field(..., description="Expected required actions")
     risk_tags: list[str] = Field(default_factory=list, description="Expected risk tags")
     notes: Optional[str] = Field(None, description="Notes about the label")
+    pii_annotations: list[dict[str, Any]] = Field(
+        default_factory=list, description="PII annotations for redaction evaluation"
+    )
 
 
 class GoldenLabelDataset(BaseModel):
@@ -73,3 +84,7 @@ class GoldenLabelDataset(BaseModel):
             if label.email_hash == email_hash:
                 return label
         return None
+
+    def to_dict(self) -> dict[str, dict[str, Any]]:
+        """Convert labels to dictionary mapping email_hash to label data."""
+        return {label.email_hash: label.model_dump() for label in self.labels}

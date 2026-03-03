@@ -40,22 +40,30 @@ class SafeLogger:
         return value
 
     def debug(self, message: str, **kwargs: Any) -> None:
-        sanitized_kwargs = {k: self._sanitize(v) for k, v in kwargs.items()}
+        sanitized_kwargs = {
+            k: self._sanitize(v) for k, v in kwargs.items() if k != "extra"
+        }
         extra = {"correlation_id": correlation_id_var.get()}
         self._logger.debug(message, **sanitized_kwargs, extra=extra)
 
     def info(self, message: str, **kwargs: Any) -> None:
-        sanitized_kwargs = {k: self._sanitize(v) for k, v in kwargs.items()}
+        sanitized_kwargs = {
+            k: self._sanitize(v) for k, v in kwargs.items() if k != "extra"
+        }
         extra = {"correlation_id": correlation_id_var.get()}
         self._logger.info(message, **sanitized_kwargs, extra=extra)
 
     def warning(self, message: str, **kwargs: Any) -> None:
-        sanitized_kwargs = {k: self._sanitize(v) for k, v in kwargs.items()}
+        sanitized_kwargs = {
+            k: self._sanitize(v) for k, v in kwargs.items() if k != "extra"
+        }
         extra = {"correlation_id": correlation_id_var.get()}
         self._logger.warning(message, **sanitized_kwargs, extra=extra)
 
     def error(self, message: str, **kwargs: Any) -> None:
-        sanitized_kwargs = {k: self._sanitize(v) for k, v in kwargs.items()}
+        sanitized_kwargs = {
+            k: self._sanitize(v) for k, v in kwargs.items() if k != "extra"
+        }
         extra = {"correlation_id": correlation_id_var.get()}
         self._logger.error(message, **sanitized_kwargs, extra=extra)
 

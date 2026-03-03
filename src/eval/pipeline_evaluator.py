@@ -11,13 +11,19 @@ from src.eval.runner import (
 
 
 class PipelineEvaluator(BaseEvalRunner):
-    """Evaluation runner that uses the actual pipeline."""
+    """Evaluation runner that uses the actual pipeline.
+
+    This evaluator can run in two modes:
+    - Placeholder mode: Uses simple keyword matching (for testing without LLM)
+    - Production mode: Uses the actual LLM pipeline when an LLM client is provided
+    """
 
     def __init__(
         self,
         llm_client: Optional[Any] = None,
         vector_store: Optional[Any] = None,
         database: Optional[Any] = None,
+        use_llm: bool = False,
     ):
         """Initialize the pipeline evaluator.
 
@@ -25,21 +31,157 @@ class PipelineEvaluator(BaseEvalRunner):
             llm_client: LLM client for classification (optional for testing).
             vector_store: Vector store for retrieval (optional).
             database: Database for persistence (optional).
+            use_llm: If True, use actual LLM pipeline when client is provided.
         """
         self._llm_client = llm_client
         self._vector_store = vector_store
         self._database = database
+        self._use_llm = use_llm and llm_client is not None
         self._prompt_version = "eval-v1"
-        self._model_name = "eval-placeholder"
+        if self._use_llm and hasattr(llm_client, "model_name"):
+            self._model_name = llm_client.model_name
+        else:
+            self._model_name = "eval-placeholder"
+
+    def _classify_with_llm(self, email: dict[str, Any]) -> EvaluationResult:
+        """Classify a single email using the actual LLM pipeline.
+
+        Args:
+            email: Email dictionary with subject, body, sender, recipient.
+
+        Returns:
+            Evaluation result from LLM classification.
+        """
+        from src.domain.email import create_redacted_email_from_data
+        from src.llm.schemas import safe_validate_classification
+
+        email_hash = self._compute_hash(email)
+
+        redaction_data = {
+            "email_hash": email_hash,
+            "subject": email.get("subject", ""),
+            "body_text": email.get("body", ""),
+            "sender": email.get("sent_from", ""),
+            "recipient": ", ".join(email.get("sent_to", [])),
+        }
+        redacted_email = create_redacted_email_from_data(redaction_data)
+
+        import asyncio
+
+        try:
+            raw_result = asyncio.get_event_loop().run_until_complete(
+                self._llm_client.classify(
+                    email=redacted_email,
+                    prompt_version=self._prompt_version,
+                )
+            )
+
+            raw_data = (
+                raw_result.model_dump()
+                if hasattr(raw_result, "model_dump")
+                else dict(raw_result)
+            )
+            validation_result = safe_validate_classification(raw_data)
+
+            if not validation_result.is_valid:
+                return EvaluationResult(
+                    email_hash=email_hash,
+                    predicted_classification="general",
+                    predicted_priority="p4_low",
+                    predicted_actions=[],
+                    predicted_risk_tags=[],
+                    confidence=0.0,
+                    is_correct_classification=False,
+                    is_correct_priority=False,
+                    is_correct_actions=False,
+                    latency_ms=0.0,
+                )
+
+            validated_data: dict[str, Any] = validation_result.data or {}
+            classification = str(validated_data.get("classification", "general"))
+            confidence = float(validated_data.get("confidence", 0.5))
+            priority = str(validated_data.get("priority", "p4_low"))
+            risk_tags = list(validated_data.get("risk_tags", []))
+
+            actions = self._extract_actions_with_llm(redacted_email)
+
+            return EvaluationResult(
+                email_hash=email_hash,
+                predicted_classification=classification,
+                predicted_priority=priority,
+                predicted_actions=actions,
+                predicted_risk_tags=risk_tags,
+                confidence=confidence,
+                is_correct_classification=False,
+                is_correct_priority=False,
+                is_correct_actions=False,
+                latency_ms=0.0,
+            )
+
+        except Exception:
+            return EvaluationResult(
+                email_hash=email_hash,
+                predicted_classification="general",
+                predicted_priority="p4_low",
+                predicted_actions=[],
+                predicted_risk_tags=[],
+                confidence=0.0,
+                is_correct_classification=False,
+                is_correct_priority=False,
+                is_correct_actions=False,
+                latency_ms=0.0,
+            )
+
+    def _extract_actions_with_llm(self, email) -> list[str]:
+        """Extract actions using LLM.
+
+        Args:
+            email: RedactedEmail instance.
+
+        Returns:
+            List of action strings.
+        """
+        from src.llm.schemas import safe_validate_action_extraction
+
+        import asyncio
+
+        try:
+            raw_result = asyncio.get_event_loop().run_until_complete(
+                self._llm_client.extract_actions(
+                    email=email,
+                    prompt_version=self._prompt_version,
+                )
+            )
+
+            raw_data = (
+                raw_result.model_dump()
+                if hasattr(raw_result, "model_dump")
+                else dict(raw_result)
+            )
+            validation_result = safe_validate_action_extraction(raw_data)
+
+            if not validation_result.is_valid:
+                return ["email_response"]
+
+            validated_data: dict[str, Any] = validation_result.data or {}
+            actions = validated_data.get("actions", [])
+
+            return [
+                a.get("action_type", "email_response").replace("_", " ")
+                for a in actions
+            ]
+
+        except Exception:
+            return ["email_response"]
 
     def run_evaluation(
         self,
         emails: list[dict[str, Any]],
     ) -> list[EvaluationResult]:
-        """Run evaluation on a list of emails using placeholder classification.
+        """Run evaluation on a list of emails.
 
-        This is a placeholder implementation that uses simple keyword matching.
-        In production, this would use the actual LLM pipeline.
+        Uses LLM pipeline if use_llm=True and LLM client is provided,
+        otherwise falls back to placeholder classification.
 
         Args:
             emails: List of email dictionaries to evaluate.
@@ -52,9 +194,13 @@ class PipelineEvaluator(BaseEvalRunner):
         for email in emails:
             start_time = time.time()
 
-            result = self._classify_email(email)
-            _ = (time.time() - start_time) * 1000
+            if self._use_llm:
+                result = self._classify_with_llm(email)
+            else:
+                result = self._classify_email(email)
 
+            latency_ms = (time.time() - start_time) * 1000
+            result.latency_ms = latency_ms
             results.append(result)
 
         return results
