@@ -47,6 +47,7 @@ class OpenAIClient:
 
     DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
     DEFAULT_MODEL = "openai/gpt-oss-20b"
+    DEFAULT_MAX_TOKENS = 8192
 
     def __init__(
         self,
@@ -140,7 +141,7 @@ class OpenAIClient:
                     response_model=ClassificationOutput,
                     max_retries=self._max_retries,
                     temperature=0.0,
-                    max_tokens=2048,
+                    max_tokens=self.DEFAULT_MAX_TOKENS,
                     extra_body={"reasoning": {"effort": "low", "exclude": True}},
                 ),
             )
@@ -189,7 +190,7 @@ class OpenAIClient:
                     response_model=ActionExtractionOutput,
                     max_retries=self._max_retries,
                     temperature=0.0,
-                    max_tokens=2048,
+                    max_tokens=self.DEFAULT_MAX_TOKENS,
                     extra_body={"reasoning": {"effort": "low", "exclude": True}},
                 ),
             )
@@ -245,7 +246,7 @@ class OpenAIClient:
                         messages=messages,  # type: ignore[arg-type]
                         response_model=response_model,
                         temperature=temperature,
-                        max_tokens=2048,
+                        max_tokens=self.DEFAULT_MAX_TOKENS,
                         extra_body={"reasoning": {"effort": "low", "exclude": True}},
                     ),
                 )
@@ -265,7 +266,7 @@ class OpenAIClient:
                     model=self._model,
                     messages=messages,  # type: ignore[arg-type]
                     temperature=temperature,
-                    max_tokens=2048,
+                    max_tokens=self.DEFAULT_MAX_TOKENS,
                     extra_body={"reasoning": {"effort": "low", "exclude": True}},
                 )
             )
