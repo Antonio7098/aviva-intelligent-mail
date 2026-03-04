@@ -4,7 +4,7 @@ services:
     ports:
       - "8002:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/aviva_claims}
+      - DATABASE_URL=${APP_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/aviva_claims}
       - CHROMA_URL=${CHROMA_URL:-http://chroma:8000}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - CHROMA_TELEMETRY=${CHROMA_TELEMETRY:-False}
