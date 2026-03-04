@@ -601,26 +601,28 @@ async def process_emails(
 
     top_priorities = []
     for decision in sorted_decisions:  # type: ignore[assignment]
-        p = decision.get("adjusted_priority", decision.get("priority", "p4_low"))
+        d = cast(dict[str, Any], decision)
+        p = d.get("adjusted_priority", d.get("priority", "p4_low"))
         top_priorities.append(
             TopPriorityEmail(
-                email_hash=decision.get("email_hash", ""),
-                subject=decision.get("subject", ""),
-                classification=decision.get("classification", "general"),
+                email_hash=d.get("email_hash", ""),
+                subject=d.get("subject", ""),
+                classification=d.get("classification", "general"),
                 priority=p,
-                action_count=len(decision.get("actions", [])),
+                action_count=len(d.get("actions", [])),
             )
         )
 
     actionable_emails = []
-    for decision in batch_decisions:
-        actions = decision.get("actions", [])
+    for decision in batch_decisions:  # type: ignore[assignment]
+        d = cast(dict[str, Any], decision)
+        actions = d.get("actions", [])
         if actions:
             for action in actions:
                 actionable_emails.append(
                     ActionableEmail(
-                        email_hash=decision.get("email_hash", ""),
-                        subject=decision.get("subject", ""),
+                        email_hash=d.get("email_hash", ""),
+                        subject=d.get("subject", ""),
                         action_type=action.get("action_type", "manual_review"),
                         deadline=action.get("deadline"),
                     )
