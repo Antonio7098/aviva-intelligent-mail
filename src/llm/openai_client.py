@@ -11,6 +11,8 @@ Configuration is provided via constructor for dependency injection.
 
 import logging
 import os
+import asyncio
+import random
 
 import instructor
 from openai import AsyncOpenAI
@@ -51,7 +53,7 @@ class OpenAIClient:
         base_url: str = "",
         api_key: str = "",
         model: str = "",
-        max_retries: int = 3,
+        max_retries: int = 1,
         timeout: int = 60,
     ):
         """Initialize the OpenAI client with Instructor.
@@ -87,6 +89,28 @@ class OpenAIClient:
     def model_version(self) -> str:
         return "latest"
 
+    def _is_rate_limit(self, error: Exception) -> bool:
+        msg = str(error).lower()
+        return "rate limit" in msg or "429" in msg or "too many requests" in msg
+
+    async def _call_with_rate_limit_backoff(self, fn, *, max_attempts: int = 4):
+        last_error: Exception | None = None
+        for attempt in range(max_attempts):
+            try:
+                return await fn()
+            except Exception as e:
+                last_error = e
+                if not self._is_rate_limit(e) or attempt >= max_attempts - 1:
+                    raise
+                delay = min(8.0, (2**attempt) + random.uniform(0, 0.5))
+                logger.warning(
+                    "Rate limited by LLM provider, retrying",
+                    extra={"attempt": attempt + 1, "delay_seconds": delay},
+                )
+                await asyncio.sleep(delay)
+        if last_error is not None:
+            raise last_error
+
     async def classify(
         self, email: RedactedEmail, prompt_version: str = "v1.0"
     ) -> ClassificationOutput:
@@ -106,16 +130,19 @@ class OpenAIClient:
         email_text = sanitize_user_input(email_text)
 
         try:
-            result = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": email_text},
-                ],
-                response_model=ClassificationOutput,
-                max_retries=self._max_retries,
-                temperature=0.0,
-                max_tokens=1024,
+            result = await self._call_with_rate_limit_backoff(
+                lambda: self._client.chat.completions.create(
+                    model=self._model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": email_text},
+                    ],
+                    response_model=ClassificationOutput,
+                    max_retries=self._max_retries,
+                    temperature=0.0,
+                    max_tokens=2048,
+                    extra_body={"reasoning": {"effort": "low", "exclude": True}},
+                ),
             )
             return result
         except Exception as e:
@@ -152,16 +179,19 @@ class OpenAIClient:
         email_text = sanitize_user_input(email_text)
 
         try:
-            result = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": email_text},
-                ],
-                response_model=ActionExtractionOutput,
-                max_retries=self._max_retries,
-                temperature=0.0,
-                max_tokens=1024,
+            result = await self._call_with_rate_limit_backoff(
+                lambda: self._client.chat.completions.create(
+                    model=self._model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": email_text},
+                    ],
+                    response_model=ActionExtractionOutput,
+                    max_retries=self._max_retries,
+                    temperature=0.0,
+                    max_tokens=2048,
+                    extra_body={"reasoning": {"effort": "low", "exclude": True}},
+                ),
             )
             return result
         except Exception as e:
@@ -209,12 +239,15 @@ class OpenAIClient:
 
         try:
             if response_model:
-                result = await self._client.chat.completions.create(
-                    model=self._model,
-                    messages=messages,  # type: ignore[arg-type]
-                    response_model=response_model,
-                    temperature=temperature,
-                    max_tokens=2048,
+                result = await self._call_with_rate_limit_backoff(
+                    lambda: self._client.chat.completions.create(
+                        model=self._model,
+                        messages=messages,  # type: ignore[arg-type]
+                        response_model=response_model,
+                        temperature=temperature,
+                        max_tokens=2048,
+                        extra_body={"reasoning": {"effort": "low", "exclude": True}},
+                    ),
                 )
                 return result.model_dump_json()  # type: ignore[return-value]
 
@@ -227,11 +260,14 @@ class OpenAIClient:
                 timeout=60,
                 max_retries=0,
             )
-            result = await raw_client.chat.completions.create(
-                model=self._model,
-                messages=messages,  # type: ignore[arg-type]
-                temperature=temperature,
-                max_tokens=2048,
+            result = await self._call_with_rate_limit_backoff(
+                lambda: raw_client.chat.completions.create(
+                    model=self._model,
+                    messages=messages,  # type: ignore[arg-type]
+                    temperature=temperature,
+                    max_tokens=2048,
+                    extra_body={"reasoning": {"effort": "low", "exclude": True}},
+                )
             )
             return result.choices[0].message.content or ""
         except Exception as e:

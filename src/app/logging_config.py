@@ -13,6 +13,15 @@ from src.app.config import settings
 correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")
 
 
+class CorrelationIdFilter(logging.Filter):
+    """Ensure all log records have a correlation_id field."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "correlation_id"):
+            record.correlation_id = correlation_id_var.get() or "-"
+        return True
+
+
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
@@ -77,6 +86,11 @@ def setup_logging() -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
         stream=sys.stdout,
     )
+
+    correlation_filter = CorrelationIdFilter()
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        handler.addFilter(correlation_filter)
 
     for logger_name in ["uvicorn", "uvicorn.access"]:
         logger = logging.getLogger(logger_name)

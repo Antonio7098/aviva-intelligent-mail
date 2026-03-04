@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
+RUN python -m spacy download en_core_web_lg
 
 
 FROM python:3.12-slim
@@ -20,10 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+RUN groupadd -r appgroup && useradd -m -r -g appgroup appuser
 
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+COPY --from=builder /root/.local /home/appuser/.local
+RUN chown -R appuser:appgroup /home/appuser/.local
+ENV PATH=/home/appuser/.local/bin:$PATH
 
 COPY --chown=appuser:appgroup src/ ./src/
 
