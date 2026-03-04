@@ -182,11 +182,6 @@ python mail_intel_cli.py query "What are the high priority claims?"
 python mail_intel_cli.py query "Show me all new claims"
 ```
 
-The query endpoint uses:
-- **google/gemini-embedding-001** for semantic search
-- **nvidia/nemotron-3-nano-30b-a3b:free** for grounded answering
-- Hallucination guards to ensure answers are grounded in retrieved documents
-
 ## API Documentation
 
 Once running, visit:
