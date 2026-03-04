@@ -65,6 +65,36 @@ P99 Latency: 17535.07
 ==================================================
 ```
 
+### Classification Confusion Matrix
+
+| Actual \ Predicted | claim_update | complaint | general | new_claim | policy_inquiry |
+|--------------------|--------------|-----------|---------|-----------|----------------|
+| claim_update       | 4            | 0         | 0       | 1         | 0              |
+| complaint          | 0            | 2         | 0       | 0         | 0              |
+| general            | 0            | 0         | 6       | 0         | 0              |
+| new_claim          | 0            | 0         | 0       | 3         | 0              |
+| policy_inquiry     | 0            | 0         | 0       | 0         | 4              |
+
+**Classification Analysis:**
+- 95% accuracy (19/20 correct)
+- Only 1 misclassification: `c3d4e5f6a1b2` - predicted new_claim, actual claim_update
+- Excellent performance across all categories
+
+### Priority Confusion Matrix
+
+| Actual \ Predicted | p1_critical | p2_high | p3_medium | p4_low |
+|--------------------|-------------|---------|------------|--------|
+| p1_critical        | 0           | 3       | 0          | 0      |
+| p2_high            | 0           | 2       | 2          | 0      |
+| p3_medium          | 0           | 1       | 2          | 4      |
+| p4_low             | 0           | 0       | 0          | 6      |
+
+**Priority Analysis:**
+- 50% agreement (10/20 correct)
+- Critical Issue: **0% P1 Recall** - All 3 P1 critical emails classified as P2
+- Tendency to under-prioritize: P3 emails often classified as P4
+- Model shows conservative priority assignment
+
 ### Placeholder Classifier (Baseline)
 
 ```
@@ -116,25 +146,25 @@ P99 Latency: 0.49
 
 ### Classification Accuracy by Category
 
-| Category | Accuracy | Notes |
-|----------|----------|-------|
-| new_claim | 80% | Good - keyword matching works well |
-| claim_update | 60% | Moderate - overlapping vocabulary |
-| policy_inquiry | 100% | Excellent - distinctive keywords |
-| complaint | 50% | Needs improvement |
-| general | 33% | Hardest to classify correctly |
-| renewal | 0% | Only 1 sample, not enough data |
-| cancellation | 100% | Good - distinctive |
+| Category | Correct | Total | Accuracy | Notes |
+|----------|---------|-------|----------|-------|
+| new_claim | 3 | 4 | 75% | 1 misclassified as claim_update |
+| claim_update | 4 | 5 | 80% | Good |
+| policy_inquiry | 4 | 4 | 100% | Excellent |
+| complaint | 2 | 2 | 100% | Excellent |
+| general | 6 | 6 | 100% | Excellent |
+| renewal | 0 | 0 | N/A | Not in dataset |
+| cancellation | 0 | 0 | N/A | Not in dataset |
 
 ### Priority Assignment
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| P1 Recall | 66.67% | >95% | ❌ |
-| P1 False Negative Rate | 33.33% | <5% | ❌ |
-| Priority Agreement | 45.00% | >80% | ❌ |
+| P1 Recall | 0.00% | >95% | ❌ |
+| P1 False Negative Rate | 100.00% | <5% | ❌ |
+| Priority Agreement | 50.00% | >80% | ❌ |
 
-**Analysis:** Critical (P1) emails are sometimes under-prioritized. This is the highest-priority metric to improve for production.
+**Analysis:** Critical (P1) emails are systematically under-prioritized to P2. This is the highest-priority metric to improve for production. The model tends to assign conservative (lower) priorities.
 
 ### Action Extraction
 
@@ -144,6 +174,12 @@ P99 Latency: 0.49
 | Action Recall | 42.31% | >70% | ❌ |
 
 **Analysis:** Action extraction needs significant improvement. The placeholder uses simple keyword matching which doesn't capture the full semantic meaning.
+
+## Visualizations
+
+![Classification and Priority Confusion Matrices](../eval/reports/confusion-matrices-gpt-oss-20b.png)
+
+![Evaluation Summary](../eval/reports/evaluation-summary-gpt-oss-20b.png)
 
 ---
 

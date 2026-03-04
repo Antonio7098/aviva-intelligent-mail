@@ -236,7 +236,7 @@ class PIIRedactionEvaluator:
 
         redacted = text
 
-        patterns = [
+        patterns: list[tuple[str, str] | tuple[str, str, Any]] = [
             (r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL]"),
             (r"(?:\+44|0)(?:\d{4}|\d{3,4})[\s\-]?\d{3,4}[\s\-]?\d{3,4}", "[PHONE]"),
             (r"[A-Z]{2,3}[-\s]?HOM[-\s]?\d{6}", "[CLAIM_ID]", re.IGNORECASE),
@@ -252,15 +252,13 @@ class PIIRedactionEvaluator:
         for pattern in patterns:
             if len(pattern) == 3:
                 redacted = re.sub(
-                    pattern[0],  # type: ignore[arg-type]
-                    pattern[1],  # type: ignore[arg-type]
+                    pattern[0],
+                    pattern[1],
                     redacted,
-                    flags=pattern[2],  # type: ignore[arg-type]
+                    flags=pattern[2],
                 )
             else:
-                redacted = re.sub(  # type: ignore[arg-type]
-                    pattern[0], pattern[1], redacted
-                )
+                redacted = re.sub(pattern[0], pattern[1], redacted)
 
         return redacted
 

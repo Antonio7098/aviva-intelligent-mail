@@ -34,6 +34,7 @@ from src.llm.openai_client import create_openai_client
 from src.llm.client import LLMClient
 from src.pipeline.stages.indexing import IndexingStage
 from src.store.chroma_store import ChromaVectorStore
+from src.store.vector import VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +164,7 @@ def create_email_pipeline(
     audit_emitter: Optional[AuditEmitter] = None,
     pii_redactor: Optional[PIIRedactor] = None,
     llm_client: Optional[LLMClient] = None,
+    vector_store: Optional[VectorStore] = None,
     use_llm: bool = True,
 ) -> UnifiedStageGraph:
     """Create the email processing pipeline.
@@ -223,7 +225,7 @@ def create_email_pipeline(
     priority_stage = PriorityPolicyStage(audit_emitter=audit_emitter)
 
     indexing_stage = IndexingStage(
-        vector_store=ChromaVectorStore(),
+        vector_store=vector_store or ChromaVectorStore(),
     )
 
     pipeline = (

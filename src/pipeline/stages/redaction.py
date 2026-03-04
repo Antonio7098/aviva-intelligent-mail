@@ -56,6 +56,8 @@ class MinimisationRedactionStage:
         ctx,
         email_hash: str,
         pii_counts: dict[str, int],
+        redacted_subject: str = "",
+        redacted_body_preview: str = "",
         status: str = "success",
     ) -> None:
         """Emit EMAIL_REDACTED audit event.
@@ -74,6 +76,8 @@ class MinimisationRedactionStage:
         payload = {
             "email_hash": email_hash,
             "pii_counts": pii_counts,
+            "redacted_subject": redacted_subject,
+            "redacted_body_preview": redacted_body_preview,
             "redaction_timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -252,6 +256,8 @@ class MinimisationRedactionStage:
                 ctx=ctx,
                 email_hash=redacted_email_hash,
                 pii_counts=pii_counts,
+                redacted_subject=(redacted_subject or "")[:200],
+                redacted_body_preview=(redacted_body or "")[:500],
                 status="success",
             )
 

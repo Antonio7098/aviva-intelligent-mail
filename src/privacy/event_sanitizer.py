@@ -18,6 +18,7 @@ ALLOWED_PAYLOAD_FIELDS = {
     "risk_tags",
     "rationale",
     "redacted_subject",
+    "redacted_body_preview",
     "pii_counts",
     "action_type",
     "entity_refs",
@@ -49,6 +50,8 @@ FORBIDDEN_PATTERNS = [
     (r"body_text|body_html|email_body|raw_body", "raw email body"),
     (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "raw email address"),
 ]
+
+EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
 
 
 MAX_FIELD_LENGTH = 10000
@@ -171,6 +174,11 @@ class EventSanitizer:
                     logger.warning(f"Hashing email field: {key}")
                     sanitized[f"{key}_hash"] = self.hash_identifier(value)
                     continue
+
+            if isinstance(value, str):
+                # Remove raw email addresses from arbitrary string fields
+                # (e.g., message IDs embedded in email_id values).
+                value = EMAIL_REGEX.sub("[REDACTED_EMAIL]", value)
 
             if isinstance(value, str) and len(value) > self._max_field_length:
                 logger.warning(
