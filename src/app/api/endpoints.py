@@ -243,6 +243,7 @@ class TriageDecisionOutput(BaseModel):
     adjusted_priority: Optional[str] = None
     adjustment_reason: Optional[str] = None
     risk_tags: list[str]
+    actions: list[dict] = []
     rationale: str
     model_name: str
     model_version: str
@@ -336,6 +337,15 @@ def _extract_decision_from_pipeline_results(
             "rationale", f"Classified as {classification}"
         )
 
+    action_extraction_result = results.get("action_extraction")
+    actions = []
+    if (
+        action_extraction_result
+        and action_extraction_result.status == stageflow.StageStatus.OK
+    ):
+        action_data = action_extraction_result.data or {}
+        actions = action_data.get("actions", [])
+
     return {
         "email_hash": data.get("email_hash", ""),
         "classification": classification,
@@ -344,6 +354,7 @@ def _extract_decision_from_pipeline_results(
         "adjusted_priority": data.get("adjusted_priority", "p4_low"),
         "adjustment_reason": data.get("adjustment_reason", ""),
         "risk_tags": data.get("all_risk_tags", []),
+        "actions": actions,
         "rationale": classification_rationale,
         "model_name": model_name,
         "model_version": model_version,
@@ -393,7 +404,9 @@ async def process_emails(
     emails = request.get_emails()
     shared_vector_store = await get_vector_store()
 
-    def _fallback_decision(email_input: EmailRecordInput, reason: str) -> dict[str, Any]:
+    def _fallback_decision(
+        email_input: EmailRecordInput, reason: str
+    ) -> dict[str, Any]:
         return {
             "email_hash": f"fallback_{email_input.email_id}",
             "classification": "general",
@@ -453,7 +466,9 @@ async def process_emails(
                     "Pipeline processing failed for email, using fallback",
                     extra={"email_id": email_input.email_id},
                 )
-                decision_data = _fallback_decision(email_input, "priority stage failure")
+                decision_data = _fallback_decision(
+                    email_input, "priority stage failure"
+                )
 
             return email_idx, decision_data, None
         except Exception as e:
@@ -524,6 +539,7 @@ async def process_emails(
                 processed_at=decision_data.get(
                     "processed_at", datetime.now(timezone.utc)
                 ),
+                actions=decision_data.get("actions", []),
             )
             decisions_output.append(decision)
 
@@ -534,7 +550,7 @@ async def process_emails(
                     "classification": decision.classification,
                     "priority": decision.priority,
                     "adjusted_priority": decision.adjusted_priority,
-                    "actions": [],
+                    "actions": decision_data.get("actions", []),
                     "risk_tags": decision.risk_tags,
                 }
             )
@@ -551,7 +567,7 @@ async def process_emails(
                     "classification": decision.classification,
                     "priority": decision.priority,
                     "adjusted_priority": decision.adjusted_priority,
-                    "actions": [],
+                    "actions": decision_data.get("actions", []),
                     "risk_tags": decision.risk_tags,
                 }
             )
@@ -563,6 +579,55 @@ async def process_emails(
             )
             raise HTTPException(status_code=500, detail=f"Error processing email: {e}")
 
+    from src.domain.digest import (
+        ActionableEmail,
+        DigestSummaryCounts,
+        PriorityBreakdown,
+        TopPriorityEmail,
+    )
+
+    priority_order = ["p1_critical", "p2_high", "p3_medium", "p4_low"]
+    priority_values: dict[str, int] = {p: i for i, p in enumerate(priority_order)}
+
+    sorted_decisions: list[dict] = sorted(
+        batch_decisions,
+        key=lambda d: (
+            priority_values.get(
+                d.get("adjusted_priority", d.get("priority", "p4_low")), 999
+            ),
+            -len(d.get("actions", [])),
+        ),
+    )
+
+    top_priorities = []
+    for decision in sorted_decisions:  # type: ignore[assignment]
+        d = cast(dict[str, Any], decision)
+        p = d.get("adjusted_priority", d.get("priority", "p4_low"))
+        top_priorities.append(
+            TopPriorityEmail(
+                email_hash=d.get("email_hash", ""),
+                subject=d.get("subject", ""),
+                classification=d.get("classification", "general"),
+                priority=p,
+                action_count=len(d.get("actions", [])),
+            )
+        )
+
+    actionable_emails = []
+    for decision in batch_decisions:  # type: ignore[assignment]
+        d = cast(dict[str, Any], decision)
+        actions = d.get("actions", [])
+        if actions:
+            for action in actions:
+                actionable_emails.append(
+                    ActionableEmail(
+                        email_hash=d.get("email_hash", ""),
+                        subject=d.get("subject", ""),
+                        action_type=action.get("action_type", "manual_review"),
+                        deadline=action.get("deadline"),
+                    )
+                )
+
     digest_writer = DigestWriter(db)
     digest = DailyDigest(
         correlation_id=correlation_id,
@@ -571,9 +636,9 @@ async def process_emails(
         generated_at=datetime.now(timezone.utc),
         model_version="1.0.0",
         total_processed=len(decisions_output),
+        top_priorities=top_priorities,
+        actionable_emails=actionable_emails,
     )
-
-    from src.domain.digest import DigestSummaryCounts, PriorityBreakdown
 
     counts = DigestSummaryCounts(
         new_claims=0,
