@@ -6,19 +6,33 @@ This module provides the command-line interface for processing email batches.
 import asyncio
 import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 from uuid import UUID, uuid4
 
 import typer
+from dotenv import load_dotenv
+from pathlib import Path as PathLib
 
 import stageflow
 
 from src.audit.postgres_sink import PostgresAuditSink
+from src.eval import (
+    PipelineEvaluator,
+    GoldenEmailDataset,
+    GoldenLabelDataset,
+    EvaluationTracker,
+    ReportGenerator,
+    PIIRedactionEvaluator,
+    PIIAnnotation,
+)
 from src.pipeline.graph import create_email_pipeline
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.privacy.event_sanitizer import EventSanitizer
 from src.store.postgres_db import PostgresDatabase
+
+load_dotenv(PathLib(__file__).parent.parent / ".env")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -229,6 +243,289 @@ def process(
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
+
+
+eval_app = typer.Typer(help="Evaluation commands for model testing and governance")
+
+
+@eval_app.command()
+def run(
+    emails_file: Path = typer.Option(
+        Path("eval/emails.json"),
+        "--emails",
+        "-e",
+        help="Path to golden dataset emails JSON file",
+    ),
+    labels_file: Path = typer.Option(
+        Path("eval/labels.json"),
+        "--labels",
+        "-l",
+        help="Path to golden dataset labels JSON file",
+    ),
+    output_file: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Path to save evaluation results JSON",
+    ),
+    use_llm: bool = typer.Option(
+        True,
+        "--use-llm/--no-use-llm",
+        help="Use actual LLM pipeline (default: True, use --no-use-llm for placeholder)",
+    ),
+) -> None:
+    """Run evaluation on golden dataset.
+
+    Example:
+        cmi eval run --emails eval/emails.json --labels eval/labels.json
+    """
+    try:
+        if not emails_file.exists():
+            typer.echo(f"Error: Emails file not found: {emails_file}", err=True)
+            raise typer.Exit(1)
+
+        if not labels_file.exists():
+            typer.echo(f"Error: Labels file not found: {labels_file}", err=True)
+            raise typer.Exit(1)
+
+        dataset = GoldenEmailDataset.load(emails_file)
+        label_dataset = GoldenLabelDataset.load(labels_file)
+
+        labels_dict = label_dataset.to_dict()
+
+        llm_client = None
+        actual_model_name = "eval-placeholder"
+        if use_llm:
+            try:
+                import os
+                from src.llm.openai_client import OpenAIClient
+
+                api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    typer.echo(
+                        "Warning: No API key found (OPENROUTER_API_KEY or OPENAI_API_KEY)",
+                        err=True,
+                    )
+                    typer.echo("Using placeholder classifier")
+                    use_llm = False
+                else:
+                    llm_client = OpenAIClient(api_key=api_key)
+                    actual_model_name = llm_client.model_name
+                    typer.echo(f"Using LLM: {actual_model_name}")
+            except Exception as e:
+                typer.echo(f"Warning: Could not create LLM client: {e}", err=True)
+                typer.echo("Using placeholder classifier")
+                use_llm = False
+                llm_client = None
+
+        evaluator = PipelineEvaluator(llm_client=llm_client, use_llm=use_llm)
+
+        typer.echo(f"Running evaluation on {len(dataset.emails)} emails...")
+
+        llm_failures = 0
+        try:
+            results = evaluator.run_evaluation(dataset.to_dict_list())
+            # Check if any results have the fallback classification (indicates LLM failure)
+            llm_failures = sum(
+                1
+                for r in results
+                if r.predicted_classification == "general" and r.confidence == 0.0
+            )
+            if llm_failures > 0:
+                typer.echo(
+                    f"Warning: {llm_failures}/{len(results)} emails failed LLM classification, used placeholder",
+                    err=True,
+                )
+        except Exception as e:
+            typer.echo(f"Error during evaluation: {e}", err=True)
+            use_llm = False
+            evaluator = PipelineEvaluator(llm_client=None, use_llm=False)
+            results = evaluator.run_evaluation(dataset.to_dict_list())
+
+        metrics = evaluator.calculate_metrics(results, labels_dict)
+
+        typer.echo(f"\n{'=' * 50}")
+        typer.echo("Evaluation Results")
+        typer.echo(f"{'=' * 50}")
+        typer.echo(f"Total Emails: {metrics.total_emails}")
+        typer.echo(f"Classification Accuracy: {metrics.classification_accuracy:.2%}")
+        typer.echo(f"Macro F1 Score: {metrics.macro_f1_score:.4f}")
+        typer.echo(f"P1 Recall: {metrics.p1_recall:.2%}")
+        typer.echo(f"P1 False Negative Rate: {metrics.p1_false_negative_rate:.2%}")
+        typer.echo(f"Action Precision: {metrics.action_precision:.2%}")
+        typer.echo(f"Action Recall: {metrics.action_recall:.2%}")
+        typer.echo(f"Priority Agreement: {metrics.priority_agreement:.2%}")
+        typer.echo(f"Average Latency: {metrics.average_latency_ms:.2f}ms")
+        typer.echo(f"P95 Latency: {metrics.p95_latency_ms:.2f}ms")
+        typer.echo(f"P99 Latency: {metrics.p99_latency_ms:.2f}")
+        typer.echo(f"{'=' * 50}\n")
+
+        if output_file:
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, "w") as f:
+                json.dump(
+                    {
+                        "metrics": asdict(metrics),
+                        "results": [asdict(r) for r in results],
+                    },
+                    f,
+                    indent=2,
+                )
+            typer.echo(f"Results saved to: {output_file}")
+
+        tracker = EvaluationTracker()
+        tracker.record_snapshot(
+            model_name=actual_model_name,
+            model_version="1.0.0",
+            prompt_version=evaluator._prompt_version,
+            metrics=asdict(metrics),
+        )
+        typer.echo("Evaluation snapshot recorded.")
+
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@eval_app.command()
+def report(
+    output_format: str = typer.Option(
+        "markdown",
+        "--format",
+        "-f",
+        help="Output format: markdown, json, or both",
+    ),
+    output_dir: Path = typer.Option(
+        Path("eval/reports"),
+        "--output-dir",
+        "-o",
+        help="Directory to save reports",
+    ),
+) -> None:
+    """Generate governance report from evaluation results.
+
+    Example:
+        cmi eval report --format both --output-dir eval/reports
+    """
+    try:
+        tracker = EvaluationTracker()
+        latest = tracker.get_latest_snapshot()
+
+        if not latest:
+            typer.echo(
+                "Error: No evaluation snapshots found. Run 'cmi eval run' first.",
+                err=True,
+            )
+            raise typer.Exit(1)
+
+        metrics_dict = {
+            "total_emails": latest.total_emails,
+            "classification_accuracy": latest.classification_accuracy,
+            "macro_f1_score": latest.macro_f1_score,
+            "p1_recall": latest.p1_recall,
+            "p1_false_negative_rate": latest.p1_false_negative_rate,
+            "action_precision": latest.action_precision,
+            "action_recall": latest.action_recall,
+            "priority_agreement": latest.priority_agreement,
+            "average_latency_ms": latest.average_latency_ms,
+            "p95_latency_ms": latest.p95_latency_ms,
+            "p99_latency_ms": latest.p99_latency_ms,
+        }
+
+        generator = ReportGenerator(output_dir=output_dir)
+        report = generator.generate_report(
+            metrics=metrics_dict,
+            model_name=latest.model_name,
+            model_version=latest.model_version,
+            prompt_version=latest.prompt_version,
+            output_format=output_format,
+        )
+
+        typer.echo(f"\n{'=' * 50}")
+        typer.echo("Governance Report Generated")
+        typer.echo(f"{'=' * 50}")
+        typer.echo(report.to_markdown())
+        typer.echo(f"\nReports saved to: {output_dir}")
+        typer.echo(f"{'=' * 50}\n")
+
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@eval_app.command()
+def pii_eval(
+    emails_file: Path = typer.Option(
+        Path("eval/emails.json"),
+        "--emails",
+        "-e",
+        help="Path to golden dataset emails JSON file",
+    ),
+    labels_file: Path = typer.Option(
+        Path("eval/labels.json"),
+        "--labels",
+        "-l",
+        help="Path to golden dataset labels JSON file",
+    ),
+) -> None:
+    """Evaluate PII detection and redaction quality.
+
+    Example:
+        cmi eval pii-eval --emails eval/emails.json --labels eval/labels.json
+    """
+    try:
+        if not emails_file.exists():
+            typer.echo(f"Error: Emails file not found: {emails_file}", err=True)
+            raise typer.Exit(1)
+
+        if not labels_file.exists():
+            typer.echo(f"Error: Labels file not found: {labels_file}", err=True)
+            raise typer.Exit(1)
+
+        dataset = GoldenEmailDataset.load(emails_file)
+        label_dataset = GoldenLabelDataset.load(labels_file)
+
+        evaluator = PIIRedactionEvaluator()
+
+        typer.echo(f"Running PII evaluation on {len(dataset.emails)} emails...")
+
+        results = []
+        for email, label in zip(dataset.emails, label_dataset.labels):
+            email_text = email.subject + " " + email.body
+
+            annotation = PIIAnnotation(
+                email_hash=label.email_hash,
+                pii_instances=label.pii_annotations or [],
+            )
+
+            result = evaluator.evaluate_email(email_text, annotation)
+            results.append(result)
+
+        metrics = evaluator.calculate_metrics(results)
+
+        typer.echo(f"\n{'=' * 50}")
+        typer.echo("PII Redaction Evaluation Results")
+        typer.echo(f"{'=' * 50}")
+        typer.echo(f"Total Emails: {metrics.total_emails}")
+        typer.echo(f"Overall Precision: {metrics.overall_precision:.4f}")
+        typer.echo(f"Overall Recall: {metrics.overall_recall:.4f}")
+        typer.echo(f"Overall F1 Score: {metrics.overall_f1:.4f}")
+        typer.echo(f"Redaction Completeness: {metrics.redaction_completeness_rate:.4f}")
+        typer.echo(
+            f"Placeholder Consistency: {metrics.placeholder_consistency_rate:.4f}"
+        )
+        typer.echo("\nPer-type F1 Scores:")
+        for pii_type, f1 in metrics.f1_per_type.items():
+            if f1 > 0:
+                typer.echo(f"  {pii_type}: {f1:.4f}")
+        typer.echo(f"{'=' * 50}\n")
+
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+app.add_typer(eval_app, name="eval")
 
 
 if __name__ == "__main__":

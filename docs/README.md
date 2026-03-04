@@ -32,6 +32,7 @@ This directory contains business and operational documentation for Aviva Intelli
 
 - [SOLID.md](SOLID.md) - SOLID principles implementation across codebase
 - [PRIVACY.md](PRIVACY.md) - Privacy layer implementation (Sprint 4)
+- [EVALUATION.md](EVALUATION.md) - Model evaluation framework (Sprint 8)
 
 ---
 

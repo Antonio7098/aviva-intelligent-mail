@@ -1,0 +1,247 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-03-03T00:00:00Z",
+  "description": "Expected labels for golden dataset emails including PII annotations",
+  "labels": [
+    {
+      "email_hash": "a1b2c3d4e5f6",
+      "classification": "new_claim",
+      "priority": "p1_critical",
+      "required_actions": ["claim_assign", "manual_review", "email_response"],
+      "risk_tags": ["high_value", "legal"],
+      "notes": "FNOL for storm damage to listed property",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "mhairi.smith@protonmail.com"},
+        {"type": "PHONE", "start": 0, "end": 0, "original_value": "07498 220673"},
+        {"type": "POLICY_ID", "start": 0, "end": 0, "original_value": "HOM-HOL-993241"}
+      ]
+    },
+    {
+      "email_hash": "b2c3d4e5f6a1",
+      "classification": "new_claim",
+      "priority": "p1_critical",
+      "required_actions": ["claim_assign", "fraud_check", "email_response"],
+      "risk_tags": ["fraud_suspicion", "high_value"],
+      "notes": "FNOL for van theft with tools inside",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "n.bradley.plumbing@sky.com"},
+        {"type": "PHONE", "start": 0, "end": 0, "original_value": "07876 991002"},
+        {"type": "POLICY_ID", "start": 0, "end": 0, "original_value": "MTR-COM-554872"}
+      ]
+    },
+    {
+      "email_hash": "c3d4e5f6a1b2",
+      "classification": "claim_update",
+      "priority": "p3_medium",
+      "required_actions": ["email_response", "manual_review"],
+      "risk_tags": [],
+      "notes": "Claim form submission from broker",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "claims@bridgegatebrokers.co.uk"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-HOM-533661"}
+      ]
+    },
+    {
+      "email_hash": "d4e5f6a1b2c3",
+      "classification": "claim_update",
+      "priority": "p3_medium",
+      "required_actions": ["email_response"],
+      "risk_tags": [],
+      "notes": "Adjuster appointment update",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "c.ashford@hotmail.co.uk"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-HOM-483912"}
+      ]
+    },
+    {
+      "email_hash": "e5f6a1b2c3d4",
+      "classification": "policy_inquiry",
+      "priority": "p3_medium",
+      "required_actions": ["email_response"],
+      "risk_tags": [],
+      "notes": "Policy coverage inquiry about malicious damage",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "dylan.hughes@btinternet.com"}
+      ]
+    },
+    {
+      "email_hash": "f6a1b2c3d4e5",
+      "classification": "policy_inquiry",
+      "priority": "p3_medium",
+      "required_actions": ["email_response"],
+      "risk_tags": ["legal"],
+      "notes": "Policy inquiry about listed building repairs",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "edward.marston@marstonandco.co.uk"},
+        {"type": "POLICY_ID", "start": 0, "end": 0, "original_value": "HOM-LT-882113"}
+      ]
+    },
+    {
+      "email_hash": "a1b2c3d4e5f6g",
+      "classification": "complaint",
+      "priority": "p2_high",
+      "required_actions": ["escalate", "email_response"],
+      "risk_tags": ["escalation"],
+      "notes": "Complaint about courtesy van not provided",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "c.rafferty@outlook.com"},
+        {"type": "PHONE", "start": 0, "end": 0, "original_value": "07761 552144"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-MTR-560442"}
+      ]
+    },
+    {
+      "email_hash": "b2c3d4e5f6g1",
+      "classification": "complaint",
+      "priority": "p1_critical",
+      "required_actions": ["escalate", "manual_review"],
+      "risk_tags": ["regulatory", "legal"],
+      "notes": "Data protection breach - solicitor involvement",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "d.jameson@taylorandsonssolicitors.co.uk"},
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "dpo@pinnacle-insurance.co.uk"},
+        {"type": "PHONE", "start": 0, "end": 0, "original_value": "029 20 555 781"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-LIA-752388"}
+      ]
+    },
+    {
+      "email_hash": "c3d4e5f6g1h2",
+      "classification": "general",
+      "priority": "p4_low",
+      "required_actions": [],
+      "risk_tags": [],
+      "notes": "Positive feedback",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "cs.feedback@pinnacle-insurance.co.uk"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-HOM-520119"}
+      ]
+    },
+    {
+      "email_hash": "d4e5f6g1h2i3",
+      "classification": "general",
+      "priority": "p4_low",
+      "required_actions": [],
+      "risk_tags": [],
+      "notes": "Courier delivery notification",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "no-reply@dpd.co.uk"}
+      ]
+    },
+    {
+      "email_hash": "e5f6g1h2i3j4",
+      "classification": "general",
+      "priority": "p4_low",
+      "required_actions": [],
+      "risk_tags": [],
+      "notes": "Misrouted CV",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "emma.jenkins@gmail.com"}
+      ]
+    },
+    {
+      "email_hash": "f6g1h2i3j4k5",
+      "classification": "general",
+      "priority": "p4_low",
+      "required_actions": [],
+      "risk_tags": [],
+      "notes": "Internal finance notice",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "finance@pinnacle-insurance.co.uk"}
+      ]
+    },
+    {
+      "email_hash": "g1h2i3j4k5l6",
+      "classification": "general",
+      "priority": "p4_low",
+      "required_actions": [],
+      "risk_tags": [],
+      "notes": "Fraud alert",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "antifraud@pinnacle-insurance.co.uk"}
+      ]
+    },
+    {
+      "email_hash": "h2i3j4k5l6m7",
+      "classification": "general",
+      "priority": "p4_low",
+      "required_actions": [],
+      "risk_tags": [],
+      "notes": "Compliance update",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "compliance@pinnacle-insurance.co.uk"}
+      ]
+    },
+    {
+      "email_hash": "i3j4k5l6m7n8",
+      "classification": "policy_inquiry",
+      "priority": "p3_medium",
+      "required_actions": ["email_response"],
+      "risk_tags": [],
+      "notes": "Policy inquiry about mobility scooter theft",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "r.macpherson@protonmail.com"}
+      ]
+    },
+    {
+      "email_hash": "j4k5l6m7n8o9",
+      "classification": "policy_inquiry",
+      "priority": "p3_medium",
+      "required_actions": ["email_response"],
+      "risk_tags": ["legal"],
+      "notes": "PL policy inquiry about event coverage",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "sarah@blossomandbloom.co.uk"},
+        {"type": "POLICY_ID", "start": 0, "end": 0, "original_value": "LIA-PL-992311"}
+      ]
+    },
+    {
+      "email_hash": "k5l6m7n8o9p0",
+      "classification": "new_claim",
+      "priority": "p2_high",
+      "required_actions": ["claim_assign", "manual_review", "email_response"],
+      "risk_tags": ["legal"],
+      "notes": "PL FNOL - slip and fall with solicitor",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "manager@hayesstreetcafe.co.uk"},
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "r.williams@morganrowesolicitors.co.uk"},
+        {"type": "PHONE", "start": 0, "end": 0, "original_value": "07803 441221"}
+      ]
+    },
+    {
+      "email_hash": "l6m7n8o9p0q1",
+      "classification": "claim_update",
+      "priority": "p2_high",
+      "required_actions": ["manual_review", "email_response"],
+      "risk_tags": ["high_value"],
+      "notes": "Parts authority request",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "service@steelcity-bodyshop.co.uk"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-MTR-552301"}
+      ]
+    },
+    {
+      "email_hash": "m7n8o9p0q1r2",
+      "classification": "claim_update",
+      "priority": "p2_high",
+      "required_actions": ["escalate", "email_response"],
+      "risk_tags": ["legal"],
+      "notes": "Solicitor chasing indemnity position",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "k.macleod@caledonialaw.co.uk"},
+        {"type": "PHONE", "start": 0, "end": 0, "original_value": "0131 228 7711"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-LIA-771045"}
+      ]
+    },
+    {
+      "email_hash": "n8o9p0q1r2s3",
+      "classification": "claim_update",
+      "priority": "p3_medium",
+      "required_actions": ["email_response", "manual_review"],
+      "risk_tags": ["fraud_suspicion"],
+      "notes": "Documents for existing claim - theft",
+      "pii_annotations": [
+        {"type": "EMAIL", "start": 0, "end": 0, "original_value": "l.mitchell21@gmail.com"},
+        {"type": "CLAIM_ID", "start": 0, "end": 0, "original_value": "PIN-HOM-520119"}
+      ]
+    }
+  ]
+}
