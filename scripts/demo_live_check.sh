@@ -215,14 +215,18 @@ if [[ -z "$PERSISTED_EMAIL_HASH_SQL_LIST" ]]; then
   PERSISTED_EMAIL_HASH_SQL_LIST="NULL"
 fi
 
-echo "Process completed:"
-echo "  correlation_id: $RESPONSE_CORRELATION_ID"
-echo "  decisions in response: $EMAIL_COUNT"
-echo "  unique email_hashes: $UNIQUE_EMAIL_HASHES"
-echo "  fallback email_hashes: $FALLBACK_EMAIL_HASHES"
-echo "  persisted email_hashes: $PERSISTED_EMAIL_HASHES"
-echo "  total_processed: $TOTAL_PROCESSED"
-echo "  expected emails: $EXPECTED_EMAILS"
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║                     PROCESS COMPLETED                            ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+echo ""
+echo "  📧 Batch Summary:"
+echo "  ─────────────────────────────────────────────────────────────────"
+echo "  correlation_id:       $RESPONSE_CORRELATION_ID"
+echo "  emails processed:     $TOTAL_PROCESSED / $EXPECTED_EMAILS"
+echo "  unique email hashes: $UNIQUE_EMAIL_HASHES"
+echo "  persisted:           $PERSISTED_EMAIL_HASHES"
+echo "  fallbacks:          $FALLBACK_EMAIL_HASHES"
 
 if [[ "$TOTAL_PROCESSED" -ne "$EXPECTED_EMAILS" ]]; then
   echo "ERROR: total_processed ($TOTAL_PROCESSED) does not match expected emails ($EXPECTED_EMAILS)" >&2
@@ -258,19 +262,64 @@ for idx, row in enumerate(rows, start=1):
     print(f"  pii_counts: {payload.get('pii_counts', {})}")
 PY
 
-echo "==> Fetching digest"
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║                        DIGEST SUMMARY                           ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+echo ""
+
 curl -fsS "$API_PREFIX/digest/$RESPONSE_CORRELATION_ID" >"$DIGEST_RESPONSE_JSON"
 python3 - "$DIGEST_RESPONSE_JSON" <<'PY'
 import json
 import sys
 with open(sys.argv[1], "r", encoding="utf-8") as f:
     d = json.load(f)
-print("Digest summary_counts:", d.get("summary_counts", {}))
-print("Digest priority_breakdown:", d.get("priority_breakdown", {}))
-print("Digest total_processed:", d.get("total_processed"))
+
+counts = d.get("summary_counts", {})
+print("  📊 Classification Breakdown:")
+print("  ─────────────────────────────────────────────────────────────────")
+for k, v in counts.items():
+    if v > 0:
+        print(f"    {k:20s}: {v:3d}")
+print("")
+
+breakdown = d.get("priority_breakdown", {})
+print("  🎯 Priority Breakdown:")
+print("  ─────────────────────────────────────────────────────────────────")
+priority_labels = {"p1_critical": "🔴 P1-Critical", "p2_high": "🟠 P2-High", "p3_medium": "🟡 P3-Medium", "p4_low": "🟢 P4-Low"}
+for k, v in breakdown.items():
+    label = priority_labels.get(k, k)
+    print(f"    {label:20s}: {v:3d}")
+print("")
+
+top_prios = d.get("top_priorities", [])
+print(f"  ⭐ Top Priorities ({len(top_prios)} emails):")
+print("  ─────────────────────────────────────────────────────────────────")
+for i, p in enumerate(top_prios, 1):
+    print(f"    {i}. [{p.get('priority','')}] {p.get('classification','')} (actions: {p.get('action_count',0)})")
+    print(f"       hash: {p.get('email_hash','')[:16]}...")
+print("")
+
+actionable = d.get("actionable_emails", [])
+action_types = {}
+for a in actionable:
+    t = a.get("action_type", "unknown")
+    action_types[t] = action_types.get(t, 0) + 1
+
+print(f"  📋 Actionable Emails: {len(actionable)} total")
+print("  ─────────────────────────────────────────────────────────────────")
+for atype, count in sorted(action_types.items(), key=lambda x: -x[1]):
+    print(f"    {atype:20s}: {count:3d}")
+print("")
+
 PY
 
-echo "==> Query endpoint checks"
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║                      QUERY ENDPOINT CHECKS                      ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+echo ""
+
 Q1_STATUS="$(curl -sS -o "$QUERY_1_JSON" -w "%{http_code}" -X POST "$API_PREFIX/query" \
   -H "Content-Type: application/json" \
   -d '{"question":"What are the highest priority items right now?","top_k":5}')"
@@ -355,7 +404,12 @@ for idx, row in enumerate(rows, start=1):
     print(f"  payload_preview: {payload_preview}")
 PY
 
-echo "==> Database integrity checks"
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║                    DATABASE INTEGRITY CHECKS                     ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+echo ""
+
 DB_COUNTS_FILE="$WORK_DIR/db_counts.txt"
 docker compose exec -T postgres psql -U postgres -d aviva_claims -At -c \
 "select
@@ -366,7 +420,14 @@ docker compose exec -T postgres psql -U postgres -d aviva_claims -At -c \
 >"$DB_COUNTS_FILE"
 
 IFS='|' read -r DB_DECISIONS DB_ACTIONS DB_PERSIST DB_ACTION_EVENTS <"$DB_COUNTS_FILE"
-echo "DB decisions_count=$DB_DECISIONS actions_count=$DB_ACTIONS read_models_written_events=$DB_PERSIST actions_extracted_events=$DB_ACTION_EVENTS"
+
+echo "  💾 Database Records:"
+echo "  ─────────────────────────────────────────────────────────────────"
+echo "    email_decisions:     $DB_DECISIONS"
+echo "    required_actions:    $DB_ACTIONS"
+echo "    persistence events:  $DB_PERSIST"
+echo "    action events:       $DB_ACTION_EVENTS"
+echo ""
 
 if [[ "$DB_DECISIONS" -lt "$PERSISTED_EMAIL_HASHES" ]]; then
   echo "ERROR: DB decisions_count ($DB_DECISIONS) is less than persisted email hashes ($PERSISTED_EMAIL_HASHES)" >&2
@@ -378,12 +439,10 @@ if [[ "$DB_ACTIONS" -le 0 ]]; then
   exit 1
 fi
 
-echo
-echo "Live demo check PASSED"
-echo "Artifacts:"
-echo "  $WORK_DIR"
-echo "  $PROCESS_RESPONSE_JSON"
-echo "  $DIGEST_RESPONSE_JSON"
-echo "  $QUERY_1_JSON"
-echo "  $QUERY_2_JSON"
-echo "  $QUERY_3_JSON"
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║                     ✅ LIVE DEMO PASSED                          ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+echo ""
+echo "📁 Artifacts saved to: $WORK_DIR"
+echo ""
