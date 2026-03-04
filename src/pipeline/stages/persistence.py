@@ -209,6 +209,7 @@ class ReadModelWriterStage:
             correlation_id = ctx.snapshot.request_id or uuid4()
 
             if self._audit_emitter:
+                batch_correlation_id = str(ctx.snapshot.pipeline_run_id)
                 await self._audit_emitter.emit(
                     correlation_id=correlation_id,
                     email_hash=email_hash,
@@ -223,6 +224,7 @@ class ReadModelWriterStage:
                         "adjusted_priority": adjusted_priority,
                         "adjustment_reason": adjustment_reason,
                         "risk_tags": all_risk_tags,
+                        "batch_correlation_id": batch_correlation_id,
                     },
                 )
 

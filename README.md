@@ -51,11 +51,28 @@ Aviva Intelligent Mail (AIM) is an AI-powered solution that classifies, prioriti
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `OPENROUTER_API_KEY` | API key for LLM services |
-| `EMBEDDING_MODEL` | Embedding model (default: google/gemini-embedding-001) |
+Create `.env` from `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Runtime environment variables:
+
+| Variable | Default | Used for |
+|----------|---------|----------|
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/aviva_claims` | Postgres read/write store |
+| `CHROMA_URL` | `http://localhost:8001` | Chroma vector store endpoint |
+| `LLM_PROVIDER` | `openai` | LLM provider selector |
+| `LLM_API_KEY` | empty | API key for `settings.llm_api_key` consumers |
+| `LLM_MODEL` | `openai/gpt-oss-20b` | Default chat model |
+| `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | LLM API base URL |
+| `EMBEDDING_MODEL` | `google/gemini-embedding-001` | Embedding model for indexing/query |
+| `OPENROUTER_API_KEY` | empty | Required by current OpenRouter LLM/embedding clients |
+| `LOG_LEVEL` | `INFO` | App log verbosity |
+| `APP_HOST` | `0.0.0.0` | API bind host |
+| `APP_PORT` | `8000` | API bind port (inside container) |
+| `ENABLE_RAW_LOGGING` | `false` | Must stay false for privacy compliance |
 
 ## Processing Emails
 
@@ -105,6 +122,57 @@ curl -X POST http://localhost:8002/api/v1/process \
   }'
 ```
 
+## Live Demo Script
+
+Use the demo script to run an end-to-end readiness check (infra, migrations, processing, redaction samples, digest, query checks, DB integrity).
+
+```bash
+./scripts/demo_live_check.sh ./emails_candidate.json
+```
+
+What it does:
+- Starts Docker services (optional rebuild)
+- Applies DB migrations
+- Calls `POST /api/v1/process`
+- Shows live progress: `Processing emails: X/Y`
+- Prints a small sample of PII-redacted emails (subject/body preview + pii_counts)
+- Calls `GET /api/v1/digest/{correlation_id}`
+- Calls `POST /api/v1/query` with multiple test prompts
+- Prints a sample of audit events for processed emails
+- Verifies `email_decisions` and `required_actions` in Postgres
+
+Useful environment overrides:
+
+```bash
+# Lower processing concurrency for stricter rate limits
+BATCH_SIZE=1 ./scripts/demo_live_check.sh ./emails_candidate.json
+
+# Set handler id and API base URL
+HANDLER_ID=demo-handler BASE_URL=http://localhost:8002 ./scripts/demo_live_check.sh ./emails_candidate.json
+
+# Override model/provider for this run
+LLM_MODEL=openai/gpt-4o-mini ./scripts/demo_live_check.sh ./emails_candidate.json
+
+# Control sample output size
+SAMPLE_REDACTED_COUNT=2 SAMPLE_AUDIT_COUNT=5 ./scripts/demo_live_check.sh ./emails_candidate.json
+
+# Force image rebuild on start (default is no rebuild)
+FORCE_BUILD=1 ./scripts/demo_live_check.sh ./emails_candidate.json
+```
+
+Demo script env vars:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HANDLER_ID` | `live-demo-handler` | Handler id sent to `/process` |
+| `BATCH_SIZE` | `2` | Batch concurrency sent to `/process` |
+| `SAMPLE_REDACTED_COUNT` | `3` | Number of redacted email samples to print |
+| `SAMPLE_AUDIT_COUNT` | `8` | Number of audit event samples to print |
+| `BASE_URL` | `http://localhost:8002` | API base URL |
+| `FORCE_BUILD` | `0` | If `1`, runs `docker compose up -d --build` |
+
+Script artifacts are written to `/tmp/cmi_demo_YYYYmmdd_HHMMSS/`.
+
 ## Querying (RAG)
 
 After processing emails, query them using natural language:
@@ -113,11 +181,6 @@ After processing emails, query them using natural language:
 python mail_intel_cli.py query "What are the high priority claims?"
 python mail_intel_cli.py query "Show me all new claims"
 ```
-
-The query endpoint uses:
-- **google/gemini-embedding-001** for semantic search
-- **nvidia/nemotron-3-nano-30b-a3b:free** for grounded answering
-- Hallucination guards to ensure answers are grounded in retrieved documents
 
 ## API Documentation
 

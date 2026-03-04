@@ -153,7 +153,9 @@ async def process_email_batch(
             if ingestion_result and ingestion_result.status == stageflow.StageStatus.OK:
                 email_hash = ingestion_result.data.get("email_hash")
 
-            classification_result = results.get("placeholder_classification")
+            classification_result = results.get("placeholder_classification") or results.get(
+                "llm_classification"
+            )
             if (
                 classification_result
                 and classification_result.status == stageflow.StageStatus.OK

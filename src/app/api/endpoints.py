@@ -1,9 +1,9 @@
 """API endpoints for the Aviva Claims Mail Intelligence application."""
 
-import asyncio
 import json
+import asyncio
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from uuid import UUID, uuid4
 
 import stageflow
@@ -19,9 +19,11 @@ from src.llm.answering import AnswerGenerator
 from src.llm.grounded_answerer import GroundedAnswerer
 from src.llm.grounded_guard import GroundedGuard
 from src.llm.openai_client import OpenAIClient
+from src.llm.client import LLMClient
 from src.pipeline.graph import create_email_pipeline
 from src.pipeline.stages.audit_emitter import AuditEmitter
 from src.privacy.event_sanitizer import EventSanitizer
+from src.privacy.presidio_redactor import PresidioRedactor
 from src.store.chroma_store import ChromaVectorStore
 from src.store.digests import DigestWriter
 from src.store.postgres_db import PostgresDatabase
@@ -382,86 +384,116 @@ async def process_emails(
     )
     audit_emitter = AuditEmitter(audit_sink=audit_sink)
 
-    graph = create_email_pipeline(
-        database=db,
-        audit_emitter=audit_emitter,
-        use_llm=True,
-    )
+    shared_pii_redactor = PresidioRedactor()
+    shared_llm_client = await get_llm_client()
 
     decisions_output: list[TriageDecisionOutput] = []
     batch_decisions: list[dict] = []
 
     emails = request.get_emails()
+    shared_vector_store = await get_vector_store()
 
-    semaphore = asyncio.Semaphore(5)
+    def _fallback_decision(email_input: EmailRecordInput, reason: str) -> dict[str, Any]:
+        return {
+            "email_hash": f"fallback_{email_input.email_id}",
+            "classification": "general",
+            "confidence": 0.0,
+            "priority": "p4_low",
+            "adjusted_priority": "p4_low",
+            "adjustment_reason": "Pipeline failed, using fallback",
+            "risk_tags": ["processing_failure"],
+            "rationale": f"Fallback due to processing error: {reason[:160]}",
+            "model_name": "fallback",
+            "model_version": "1.0.0",
+            "processed_at": datetime.now(timezone.utc),
+        }
 
-    async def process_single_email(email_input, email_idx):
-        """Process a single email through the pipeline."""
-        async with semaphore:
-            try:
-                email_json = json.dumps(
-                    {
-                        "email_id": email_input.email_id,
-                        "subject": email_input.subject,
-                        "sender": email_input.sender,
-                        "recipient": email_input.recipient,
-                        "received_at": email_input.received_at.isoformat(),
-                        "body_text": email_input.body_text,
-                        "body_html": email_input.body_html,
-                        "attachments": email_input.attachments,
-                        "thread_id": email_input.thread_id,
-                    }
+    async def process_single_email(
+        graph: Any,
+        email_input: EmailRecordInput,
+        email_idx: int,
+    ) -> tuple[int, dict[str, Any], Optional[str]]:
+        """Process one email with a worker-owned graph."""
+        try:
+            email_json = json.dumps(
+                {
+                    "email_id": email_input.email_id,
+                    "subject": email_input.subject,
+                    "sender": email_input.sender,
+                    "recipient": email_input.recipient,
+                    "received_at": email_input.received_at.isoformat(),
+                    "body_text": email_input.body_text,
+                    "body_html": email_input.body_html,
+                    "attachments": email_input.attachments,
+                    "thread_id": email_input.thread_id,
+                }
+            )
+
+            pipeline_ctx = stageflow.PipelineContext(
+                pipeline_run_id=correlation_id,
+                request_id=uuid4(),
+                session_id=uuid4(),
+                user_id=uuid4(),
+                org_id=None,
+                interaction_id=uuid4(),
+                input_text=email_json,
+                topology="pipeline",
+                execution_mode="production",
+                metadata={"handler_id": request.handler_id},
+            )
+            pipeline_ctx.data["_timeout_ms"] = 120000
+
+            stage_results = await graph.run(pipeline_ctx)
+            decision_data = _extract_decision_from_pipeline_results(
+                stage_results, email_input.email_id
+            )
+
+            if decision_data is None:
+                logger.warning(
+                    "Pipeline processing failed for email, using fallback",
+                    extra={"email_id": email_input.email_id},
                 )
+                decision_data = _fallback_decision(email_input, "priority stage failure")
 
-                pipeline_ctx = stageflow.PipelineContext(
-                    pipeline_run_id=correlation_id,
-                    request_id=uuid4(),
-                    session_id=uuid4(),
-                    user_id=uuid4(),
-                    org_id=None,
-                    interaction_id=uuid4(),
-                    input_text=email_json,
-                    topology="pipeline",
-                    execution_mode="production",
-                    metadata={"handler_id": request.handler_id},
-                )
+            return email_idx, decision_data, None
+        except Exception as e:
+            logger.error(
+                "Error processing email, using fallback",
+                extra={"email_id": email_input.email_id, "error": str(e)},
+            )
+            return email_idx, _fallback_decision(email_input, str(e)), str(e)
 
-                results = await graph.run(pipeline_ctx)
+    worker_count = min(len(emails), max(1, request.batch_size))
+    work_queue: asyncio.Queue[tuple[int, EmailRecordInput] | None] = asyncio.Queue()
+    for idx, email in enumerate(emails):
+        work_queue.put_nowait((idx, email))
+    for _ in range(worker_count):
+        work_queue.put_nowait(None)
 
-                decision_data = _extract_decision_from_pipeline_results(
-                    results, email_input.email_id
-                )
+    worker_results: list[tuple[int, dict[str, Any], Optional[str]]] = []
+    worker_lock = asyncio.Lock()
 
-                if decision_data is None:
-                    logger.warning(
-                        "Pipeline processing failed for email, using fallback",
-                        extra={"email_id": email_input.email_id},
-                    )
-                    decision_data = {
-                        "email_hash": f"fallback_{email_input.email_id}",
-                        "classification": "general",
-                        "confidence": 0.0,
-                        "priority": "p4_low",
-                        "adjusted_priority": "p4_low",
-                        "adjustment_reason": "Pipeline failed, using fallback",
-                        "risk_tags": [],
-                        "rationale": "Pipeline failed, using fallback",
-                        "model_name": "fallback",
-                        "model_version": "1.0.0",
-                        "processed_at": datetime.now(timezone.utc),
-                    }
+    async def worker(worker_id: int) -> None:
+        graph = create_email_pipeline(
+            database=db,
+            audit_emitter=audit_emitter,
+            pii_redactor=shared_pii_redactor,
+            llm_client=cast(LLMClient, shared_llm_client),
+            vector_store=shared_vector_store,
+            use_llm=True,
+        )
+        while True:
+            item = await work_queue.get()
+            if item is None:
+                break
+            email_idx, email_input = item
+            result = await process_single_email(graph, email_input, email_idx)
+            async with worker_lock:
+                worker_results.append(result)
+        logger.debug("Batch worker stopped", extra={"worker_id": worker_id})
 
-                return email_idx, decision_data, None
-
-            except Exception as e:
-                logger.error(
-                    "Error processing email",
-                    extra={"email_id": email_input.email_id, "error": str(e)},
-                )
-                return email_idx, None, str(e)
-
-    tasks = [process_single_email(email, idx) for idx, email in enumerate(emails)]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    await asyncio.gather(*(worker(i) for i in range(worker_count)))
+    results = sorted(worker_results, key=lambda x: x[0])
 
     for result in results:
         if isinstance(result, Exception):
@@ -473,9 +505,7 @@ async def process_emails(
 
         email_idx, decision_data, error = result
         if error:
-            continue
-        if decision_data is None:
-            continue
+            logger.warning(f"Email processed with fallback (idx={email_idx}): {error}")
 
         email_input = emails[email_idx]
 
@@ -835,7 +865,7 @@ async def query_documents(
                 email_hash="QUERY",
                 event_type="QUERY_EXECUTED",
                 stage="api",
-                status="rejected",
+                status="degraded",
                 actor="query_api",
                 model_name=answer_model_name,
                 model_version="1.0",
@@ -845,15 +875,27 @@ async def query_documents(
                     "question": request.question,
                     "reject_reason": reject_reason,
                     "retrieval_count": retrieval_count,
+                    "avg_score": avg_score,
                 },
             )
             await audit_sink.write_event(event)
         except Exception as e:
             logger.warning("Failed to emit audit event", extra={"error": str(e)})
 
-        raise HTTPException(
-            status_code=400,
-            detail=f"Answer rejected: {reject_reason}",
+        # Demo-safe fallback: keep response grounded and cite retrieved email hashes.
+        fallback_citations = citations[: min(5, len(citations))]
+        fallback_answer = (
+            "Unable to validate a fully cited generated answer. "
+            "Here are the most relevant retrieved emails: "
+            + ", ".join(f"[email_hash:{c}]" for c in fallback_citations)
+        )
+        return QueryResponse(
+            question=request.question,
+            answer=fallback_answer,
+            citations=fallback_citations,
+            retrieval_count=retrieval_count,
+            retrieval_weak=True,
+            model_name=answer_model_name,
         )
 
     try:

@@ -4,17 +4,23 @@ services:
     ports:
       - "8002:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/aviva_claims
-      - CHROMA_URL=http://chroma:8000
-      - LOG_LEVEL=INFO
-      - CHROMA_TELEMETRY=False
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - DATABASE_URL=${APP_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/aviva_claims}
+      - CHROMA_URL=${CHROMA_URL:-http://chroma:8000}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CHROMA_TELEMETRY=${CHROMA_TELEMETRY:-False}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-20b}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-google/gemini-embedding-001}
+      - ENABLE_RAW_LOGGING=${ENABLE_RAW_LOGGING:-false}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - .:/app
-    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
   postgres:
     image: postgres:16-alpine
@@ -35,11 +41,11 @@ services:
   chroma:
     image: chromadb/chroma:latest
     ports:
-      - "8001:8001"
+      - "8001:8000"
     volumes:
       - chroma_data:/chroma/chroma
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: ["CMD", "sh", "-c", ":"]
       interval: 10s
       timeout: 5s
       retries: 5

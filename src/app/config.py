@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     )
 
     llm_model: str = Field(
-        default="nvidia/nemotron-3-nano-30b-a3b:free",
-        description="LLM model name (default: nvidia/nemotron-3-nano-30b-a3b:free)",
+        default="openai/gpt-oss-20b",
+        description="LLM model name (default: openai/gpt-oss-20b)",
     )
 
     embedding_model: str = Field(
